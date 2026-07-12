@@ -1,8 +1,12 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:location_reminders/callback.dart';
+import 'package:location_reminders/reminders_service.dart';
 import 'package:native_geofence/native_geofence.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:location_reminders/database.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,25 +23,32 @@ void main() async {
 
   await NativeGeofenceManager.instance.initialize();
 
-  runApp(const MyApp());
+  final database = AppDatabase();
+  runApp(MyApp(database));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final AppDatabase database;
+
+  const MyApp(this.database, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Location Reminders',
-      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: const MyHomePage(title: 'Location Reminders'),
+    return Provider(
+      create: (context) => RemindersService(database),
+      child: MaterialApp(
+        title: 'Location Reminders',
+        theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
+        home: MyHomePage(title: 'Location Reminders', database: database),
+      ),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({super.key, required this.title, required this.database});
 
+  final AppDatabase database;
   final String title;
 
   @override
@@ -45,50 +56,41 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _nameController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _noteController = TextEditingController();
   final _latController = TextEditingController();
   final _lonController = TextEditingController();
   final _radiusController = TextEditingController();
 
-  List<ActiveGeofence> _geofences = [];
+  List<Reminder> _reminders = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchRegisteredGeofences();
+    _fetchReminders();
   }
 
-  Future<void> _fetchRegisteredGeofences() async {
-    final geofences = await NativeGeofenceManager.instance
-        .getRegisteredGeofences();
+  Future<void> _fetchReminders() async {
+    final reminders = await widget.database.reminders.all().get();
 
     setState(() {
-      _geofences = geofences;
+      _reminders = reminders;
     });
   }
 
   void _clearGeofences() async {
-    await NativeGeofenceManager.instance.removeAllGeofences();
-    await _fetchRegisteredGeofences();
+    await context.read<RemindersService>().clear();
+    await _fetchReminders();
   }
 
   void _createGeofence() async {
     try {
-      await NativeGeofenceManager.instance.createGeofence(
-        Geofence(
-          id: _nameController.text.replaceAll(' ', '_'),
-          location: Location(
-            latitude: double.parse(_latController.text),
-            longitude: double.parse(_lonController.text),
-          ),
-          radiusMeters: double.parse(_radiusController.text),
-          triggers: {GeofenceEvent.enter},
-          androidSettings: AndroidGeofenceSettings(
-            initialTriggers: {GeofenceEvent.enter},
-          ),
-          iosSettings: IosGeofenceSettings(),
-        ),
-        geofenceTriggered,
+      await context.read<RemindersService>().create(
+        title: _titleController.text,
+        note: _noteController.text,
+        latitude: double.parse(_latController.text),
+        longitude: double.parse(_lonController.text),
+        radius: double.parse(_radiusController.text),
       );
 
       if (!mounted) return;
@@ -96,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
         SnackBar(content: const Text('Geofence created successfully')),
       );
 
-      await _fetchRegisteredGeofences();
+      await _fetchReminders();
     } on NativeGeofenceException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -120,31 +122,51 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: .center,
           spacing: 12,
           children: [
-            Text(
-              'Currently registered geofences: ${_geofences.isEmpty ? 'none' : _geofences.map((g) => g.id).join(', ')}',
-            ),
+            Text('Reminders: ${_reminders.map((g) => g.title).join(', ')}'),
             TextField(
-              controller: _nameController,
+              controller: _titleController,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Name',
+                labelText: 'Title',
               ),
             ),
             TextField(
-              controller: _latController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              controller: _noteController,
+              maxLines: 4,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
-                labelText: 'Latitude',
+                labelText: 'Note',
+                alignLabelWithHint: true,
               ),
             ),
-            TextField(
-              controller: _lonController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Longitude',
-              ),
+            Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _latController,
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Latitude',
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _lonController,
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Longitude',
+                    ),
+                  ),
+                ),
+              ],
             ),
             TextField(
               controller: _radiusController,

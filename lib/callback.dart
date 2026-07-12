@@ -1,16 +1,25 @@
 import 'package:flutter/foundation.dart';
+import 'package:location_reminders/database.dart';
 import 'package:location_reminders/notifications_service.dart';
+import 'package:location_reminders/reminders_service.dart';
 import 'package:native_geofence/native_geofence.dart';
 
 @pragma('vm:entry-point')
 Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   debugPrint('Geofence triggered with params: $params');
 
+  final reminders = RemindersService(AppDatabase());
   final notifications = NotificationsService();
-  await notifications.init();
 
-  notifications.showNotification(
-    params.geofences.map((g) => g.id).join(', '),
-    'Geofence triggered event ${params.event.name}, location ${params.location ?? 'N/A'}',
-  );
+  // TODO: figure out when android can send multiple items there
+  final geofence = params.geofences.first;
+
+  final reminder = await reminders.find(geofence.id);
+  if (reminder == null) {
+    debugPrint('Reminder not found in database: ${geofence.id}');
+    return;
+  }
+
+  await notifications.init();
+  notifications.showNotification(reminder.title, reminder.note);
 }
