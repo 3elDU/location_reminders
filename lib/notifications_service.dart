@@ -19,11 +19,11 @@ class NotificationsService {
     await _plugin.show(
       id: Random().nextInt(1048576),
       title: title,
-      body: body,
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           'geofence_triggers',
           'Geofence Triggers',
+          styleInformation: BigTextStyleInformation(body, contentTitle: title),
         ),
       ),
       payload: 'test',

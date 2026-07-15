@@ -22,7 +22,7 @@ class RemindersService {
         id: geofenceId,
         location: Location(latitude: latitude, longitude: longitude),
         radiusMeters: radius,
-        triggers: {.enter, .dwell, .exit},
+        triggers: {.enter},
         androidSettings: AndroidGeofenceSettings(
           initialTriggers: {GeofenceEvent.enter},
         ),
@@ -49,6 +49,11 @@ class RemindersService {
     return (database.select(
       database.reminders,
     )..where((r) => r.geofenceId.equals(geofenceId))).getSingleOrNull();
+  }
+
+  /// Delete a specific note
+  Future<void> delete(Reminder reminder) async {
+    await database.delete(database.reminders).delete(reminder);
   }
 
   Future<void> clear() async {

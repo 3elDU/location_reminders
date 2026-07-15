@@ -1,9 +1,13 @@
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:location_reminders/callback.dart';
+import 'package:location_reminders/components/create_card.dart';
+import 'package:location_reminders/components/note.dart';
+import 'package:location_reminders/geocoding_service.dart';
+import 'package:location_reminders/models/pending_note_model.dart';
+import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/reminders_service.dart';
-import 'package:native_geofence/native_geofence.dart';
+import 'package:native_geofence/native_geofence.dart' hide Location;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location_reminders/database.dart';
 import 'package:provider/provider.dart';
@@ -24,44 +28,42 @@ void main() async {
   await NativeGeofenceManager.instance.initialize();
 
   final database = AppDatabase();
-  runApp(MyApp(database));
+  runApp(RemindersApp(database));
 }
 
-class MyApp extends StatelessWidget {
+class RemindersApp extends StatelessWidget {
   final AppDatabase database;
 
-  const MyApp(this.database, {super.key});
+  const RemindersApp(this.database, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Provider(
-      create: (context) => RemindersService(database),
+    return MultiProvider(
+      providers: [
+        Provider(create: (context) => RemindersService(database)),
+        Provider.value(value: GeocodingService()),
+        ChangeNotifierProvider(create: (_) => PendingNoteModel()),
+      ],
       child: MaterialApp(
         title: 'Location Reminders',
         theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-        home: MyHomePage(title: 'Location Reminders', database: database),
+        home: HomePage(title: 'Location Reminders', database: database),
       ),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title, required this.database});
+class HomePage extends StatefulWidget {
+  const HomePage({super.key, required this.title, required this.database});
 
   final AppDatabase database;
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  final _titleController = TextEditingController();
-  final _noteController = TextEditingController();
-  final _latController = TextEditingController();
-  final _lonController = TextEditingController();
-  final _radiusController = TextEditingController();
-
+class _HomePageState extends State<HomePage> {
   List<Reminder> _reminders = [];
 
   @override
@@ -78,111 +80,88 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void _clearGeofences() async {
-    await context.read<RemindersService>().clear();
-    await _fetchReminders();
+  void _deleteNote(Reminder reminder) async {
+    await context.read<RemindersService>().delete(reminder);
+    _fetchReminders();
   }
 
-  void _createGeofence() async {
-    try {
-      await context.read<RemindersService>().create(
-        title: _titleController.text,
-        note: _noteController.text,
-        latitude: double.parse(_latController.text),
-        longitude: double.parse(_lonController.text),
-        radius: double.parse(_radiusController.text),
-      );
+  void _createNewNote() async {
+    final location = await LocationPickerPage.pick(context);
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Geofence created successfully')),
-      );
+    if (location == null || !mounted) return;
+    context.read<PendingNoteModel>().startCreation(location);
+  }
 
-      await _fetchReminders();
-    } on NativeGeofenceException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
-    }
+  void _cancelNoteCreation() {
+    context.read<PendingNoteModel>().finishCreation();
+  }
+
+  void _finishNoteCreation() async {
+    final model = context.read<PendingNoteModel>();
+    final repository = context.read<RemindersService>();
+
+    await repository.create(
+      title: model.title,
+      note: model.note,
+      latitude: model.location!.latitude,
+      longitude: model.location!.longitude,
+      radius: model.radius,
+    );
+
+    model.finishCreation();
+    _fetchReminders();
+  }
+
+  Widget _buildReminderCard(Reminder reminder) {
+    return Dismissible(
+      key: ValueKey(reminder.id),
+      onDismissed: (_) {
+        _deleteNote(reminder);
+      },
+      child: NoteCard(reminder),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final creatingNote = context.select<PendingNoteModel, bool>(
+      (model) => model.creating,
+    );
+    final showNoNotesLabel = !creatingNote && _reminders.isEmpty;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          IconButton(onPressed: _clearGeofences, icon: Icon(Icons.delete)),
-        ],
-      ),
+      appBar: AppBar(title: Text(widget.title)),
+      floatingActionButton: creatingNote
+          ? FloatingActionButton(
+              tooltip: 'Save note',
+              onPressed: _finishNoteCreation,
+              child: Icon(Icons.check),
+            )
+          : FloatingActionButton(
+              tooltip: 'Add note',
+              onPressed: _createNewNote,
+              child: Icon(Icons.add),
+            ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: .center,
-          spacing: 12,
-          children: [
-            Text('Reminders: ${_reminders.map((g) => g.title).join(', ')}'),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Title',
-              ),
-            ),
-            TextField(
-              controller: _noteController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Note',
-                alignLabelWithHint: true,
-              ),
-            ),
-            Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _latController,
-                    keyboardType: TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Latitude',
-                    ),
-                  ),
+        child: showNoNotesLabel
+            ? Center(
+                child: Text(
+                  'No notes yet',
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                Expanded(
-                  child: TextField(
-                    controller: _lonController,
-                    keyboardType: TextInputType.numberWithOptions(
-                      decimal: true,
+              )
+            : ListView(
+                children: [
+                  if (creatingNote)
+                    Dismissible(
+                      key: ValueKey('create-note-card'),
+                      onDismissed: (_) => _cancelNoteCreation(),
+                      child: CreateNoteCard(),
                     ),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Longitude',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            TextField(
-              controller: _radiusController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Radius (meters)',
+                  ..._reminders.map((r) => _buildReminderCard(r)),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createGeofence,
-        tooltip: 'Create Geofence',
-        child: const Icon(Icons.add),
       ),
     );
   }
