@@ -1,8 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_debouncer/flutter_debouncer.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:geocoding/geocoding.dart' hide Location;
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location_reminders/geocoding_service.dart';
+import 'package:location_reminders/models/location.dart';
 import 'package:provider/provider.dart';
 
 class LocationPickerPage extends StatefulWidget {
@@ -21,6 +26,7 @@ class LocationPickerPage extends StatefulWidget {
 enum PickerState { empty, searchingLocation, locationSelected }
 
 class _LocationPickerPageState extends State<LocationPickerPage> {
+  final _requestDebouncer = Debouncer();
   final _mapController = MapController();
   final _searchController = SearchController();
 
@@ -28,7 +34,39 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   List<Placemark> _searchResults = [];
   Location? _selected;
 
-  Future<void> searchLocation(String query) async {
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _getDeviceLocation());
+  }
+
+  // get device location and move to it on the map
+  void _getDeviceLocation() async {
+    try {
+      final snackbar = ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Retrieving current location'), persist: true),
+      );
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: LocationSettings(
+          timeLimit: const Duration(seconds: 20),
+        ),
+      );
+
+      snackbar.close();
+      _mapController.move(LatLng(position.latitude, position.longitude), 16);
+    } on TimeoutException catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Reached timeout while loading location')),
+        );
+      }
+    }
+  }
+
+  Future<void> _searchLocation(String query) async {
+    debugPrint('_searchLocation() called');
     final places = await context.read<GeocodingService>().autocomplete(query);
 
     setState(() {
@@ -44,14 +82,17 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     });
   }
 
-  void selectLocation(Placemark place) async {
+  void _selectLocation(Placemark place) async {
     final location = await context.read<GeocodingService>().locationFromAddress(
       place.street!,
     );
     if (location == null) return;
 
     setState(() {
-      _selected = location;
+      _selected = Location.fromGeocodingLocation(
+        location,
+        description: place.street!,
+      );
       _state = .locationSelected;
     });
 
@@ -59,20 +100,33 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     _mapController.move(LatLng(location.latitude, location.longitude), 16);
   }
 
-  void selectPoint(LatLng point) {
+  void _selectPoint(LatLng point) async {
+    // set state first to show point on map, then fetch readable address
+    // and update the searchbar with it
     setState(() {
       _selected = Location(
         latitude: point.latitude,
         longitude: point.longitude,
+        description:
+            "${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}",
       );
       _state = .locationSelected;
     });
 
-    _searchController.text =
-        "${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}";
+    final address = await context.read<GeocodingService>().addressFromLocation(
+      point.latitude,
+      point.longitude,
+    );
+    if (address != null) {
+      setState(() {
+        _selected!.description = address;
+      });
+    }
+
+    _searchController.text = _selected!.description;
   }
 
-  void confirmLocation() {
+  void _confirmLocation() {
     Navigator.of(context).pop(_selected!);
   }
 
@@ -87,6 +141,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             mapController: _mapController,
             options: MapOptions(
               interactionOptions: InteractionOptions(
+                // disable rotation
                 flags: InteractiveFlag.all ^ InteractiveFlag.rotate,
               ),
               initialCenter: LatLng(
@@ -94,10 +149,11 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 -0.128928,
               ), // Center the map over London, UK
               initialZoom: 9.2,
-              onTap: (_, point) => selectPoint(point),
+              onTap: (_, point) => _selectPoint(point),
             ),
             children: [
               TileLayer(
+                // TODO
                 // Bring your own tiles
                 urlTemplate:
                     'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // For demonstration only
@@ -137,7 +193,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                               "${_searchResults[index].locality}, ${_searchResults[index].country}",
                             ),
                             onTap: () {
-                              selectLocation(_searchResults[index]);
+                              _selectLocation(_searchResults[index]);
                             },
                           ),
                           separatorBuilder: (context, index) => Divider(),
@@ -149,7 +205,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                     Align(
                       alignment: .bottomRight,
                       child: FloatingActionButton(
-                        onPressed: confirmLocation,
+                        onPressed: _confirmLocation,
                         tooltip: 'Confirm',
                         child: Icon(Icons.check),
                       ),
@@ -167,7 +223,14 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                         _state = .searchingLocation;
                       });
                     },
-                    onChanged: searchLocation,
+                    onChanged: (query) {
+                      _requestDebouncer.debounce(
+                        duration: const Duration(milliseconds: 500),
+                        onDebounce: () {
+                          _searchLocation(query);
+                        },
+                      );
+                    },
                     trailing: [
                       if (_searchController.text.isNotEmpty)
                         IconButton(

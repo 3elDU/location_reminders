@@ -5,6 +5,7 @@ import 'package:location_reminders/components/create_card.dart';
 import 'package:location_reminders/components/note.dart';
 import 'package:location_reminders/geocoding_service.dart';
 import 'package:location_reminders/models/pending_note_model.dart';
+import 'package:location_reminders/pages/debug.dart';
 import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/reminders_service.dart';
 import 'package:native_geofence/native_geofence.dart' hide Location;
@@ -105,6 +106,7 @@ class _HomePageState extends State<HomePage> {
       note: model.note,
       latitude: model.location!.latitude,
       longitude: model.location!.longitude,
+      placeDescription: model.location!.description,
       radius: model.radius,
     );
 
@@ -130,7 +132,17 @@ class _HomePageState extends State<HomePage> {
     final showNoNotesLabel = !creatingNote && _reminders.isEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: GestureDetector(
+          onLongPress: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => DebugPage()),
+            );
+          },
+          child: Text(widget.title),
+        ),
+      ),
       floatingActionButton: creatingNote
           ? FloatingActionButton(
               tooltip: 'Save note',

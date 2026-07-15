@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:location_reminders/models/location.dart';
 import 'package:location_reminders/models/pending_note_model.dart';
 import 'package:location_reminders/pages/location_picker.dart';
 import 'package:provider/provider.dart';
@@ -55,10 +55,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
               crossAxisAlignment: .center,
               children: [
                 Icon(Icons.location_on_outlined),
-                Text(
-                  "${location.latitude.toStringAsFixed(5)}, ${location.longitude.toStringAsFixed(5)}",
-                ),
-                Spacer(),
+                Expanded(child: Text(location.description)),
                 IconButton(icon: Icon(Icons.edit), onPressed: _changeLocation),
               ],
             ),

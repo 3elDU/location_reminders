@@ -13,6 +13,7 @@ class RemindersService {
     required String note,
     required double latitude,
     required double longitude,
+    required String placeDescription,
     required double radius,
   }) async {
     final geofenceId = "zone_${await database.reminders.count().getSingle()}";
@@ -35,6 +36,7 @@ class RemindersService {
         .into(database.reminders)
         .insertReturning(
           RemindersCompanion.insert(
+            placeDescription: placeDescription,
             geofenceId: geofenceId,
             title: title,
             note: note,
@@ -53,6 +55,9 @@ class RemindersService {
 
   /// Delete a specific note
   Future<void> delete(Reminder reminder) async {
+    await NativeGeofenceManager.instance.removeGeofenceById(
+      reminder.geofenceId,
+    );
     await database.delete(database.reminders).delete(reminder);
   }
 

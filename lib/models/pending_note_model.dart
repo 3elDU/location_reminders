@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:location_reminders/models/location.dart';
 
 class PendingNoteModel extends ChangeNotifier {
   bool creating = false;

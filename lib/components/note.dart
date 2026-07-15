@@ -19,6 +19,14 @@ class NoteCard extends StatelessWidget {
               reminder.title,
               style: Theme.of(context).textTheme.headlineMedium,
             ),
+            Row(
+              spacing: 8,
+              crossAxisAlignment: .center,
+              children: [
+                Icon(Icons.location_on_outlined),
+                Expanded(child: Text(reminder.placeDescription)),
+              ],
+            ),
             if (reminder.note.isNotEmpty) Text(reminder.note),
           ],
         ),
