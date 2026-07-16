@@ -52,6 +52,20 @@
             "dsl_features": []
           },
           {
+            "name": "onetime",
+            "getter_name": "onetime",
+            "moor_type": "bool",
+            "nullable": false,
+            "customConstraints": null,
+            "defaultConstraints": "CHECK (\"onetime\" IN (0, 1))",
+            "dialectAwareDefaultConstraints": {
+              "sqlite": "CHECK (\"onetime\" IN (0, 1))"
+            },
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": []
+          },
+          {
             "name": "title",
             "getter_name": "title",
             "moor_type": "string",
@@ -84,7 +98,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"reminders\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"geofence_id\" TEXT NOT NULL, \"place_description\" TEXT NOT NULL, \"title\" TEXT NOT NULL, \"note\" TEXT NOT NULL);"
+          "sql": "CREATE TABLE IF NOT EXISTS \"reminders\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"geofence_id\" TEXT NOT NULL, \"place_description\" TEXT NOT NULL, \"onetime\" INTEGER NOT NULL CHECK (\"onetime\" IN (0, 1)), \"title\" TEXT NOT NULL, \"note\" TEXT NOT NULL);"
         }
       ]
     }

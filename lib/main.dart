@@ -101,14 +101,7 @@ class _HomePageState extends State<HomePage> {
     final model = context.read<PendingNoteModel>();
     final repository = context.read<RemindersService>();
 
-    await repository.create(
-      title: model.title,
-      note: model.note,
-      latitude: model.location!.latitude,
-      longitude: model.location!.longitude,
-      placeDescription: model.location!.description,
-      radius: model.radius,
-    );
+    await repository.create(model);
 
     model.finishCreation();
     _fetchReminders();

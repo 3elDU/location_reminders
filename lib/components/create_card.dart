@@ -53,16 +53,23 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
               },
             ),
             Row(
-              spacing: 8,
+              spacing: 12,
               crossAxisAlignment: .center,
               children: [
                 Icon(Icons.location_on_outlined),
                 Expanded(child: Text(location.description)),
-                IconButton(icon: Icon(Icons.edit), onPressed: _changeLocation),
+                // a little padding on the right to align horizontally with other icons
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: IconButton(
+                    icon: Icon(Icons.edit),
+                    onPressed: _changeLocation,
+                  ),
+                ),
               ],
             ),
             Row(
-              spacing: 8,
+              spacing: 12,
               children: [
                 Icon(Icons.my_location_outlined),
                 Expanded(
@@ -90,6 +97,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
                         decorationBuilder: (_, _) => InputDecoration(
                           constraints: BoxConstraints(maxHeight: 48),
                           border: InputBorder.none,
+                          contentPadding: .zero,
                           hintText: 'Radius',
                         ),
                       );
@@ -98,9 +106,27 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
                 ),
               ],
             ),
+            Selector<PendingNoteModel, bool>(
+              selector: (_, model) => model.onetime,
+              // TODO: do something with the ripple effect
+              builder: (_, onetime, _) => CheckboxListTile(
+                splashRadius: 10,
+                title: Text('One-time'),
+                value: onetime,
+                contentPadding: EdgeInsets.only(right: 8),
+                onChanged: (value) {
+                  context.read<PendingNoteModel>().updateOnetime(
+                    value ?? false,
+                  );
+                },
+              ),
+            ),
             TextField(
               controller: _noteController,
-              decoration: InputDecoration(hintText: 'Note'),
+              decoration: InputDecoration(
+                hintText: 'Note',
+                border: OutlineInputBorder(),
+              ),
               minLines: 2,
               maxLines: 10,
               onChanged: (text) {

@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:location_reminders/callback.dart';
 import 'package:location_reminders/database.dart';
+import 'package:location_reminders/models/pending_note_model.dart';
 import 'package:native_geofence/native_geofence.dart';
 
 class RemindersService {
@@ -9,23 +10,19 @@ class RemindersService {
 
   RemindersService(this.database);
 
-  Future<Reminder> create({
-    required String title,
-    required String note,
-    required double latitude,
-    required double longitude,
-    required String placeDescription,
-    required double radius,
-  }) async {
+  Future<Reminder> create(PendingNoteModel model) async {
     final geofenceId = "zone_${await database.reminders.count().getSingle()}";
 
-    debugPrint('Creating a geofence with ${radius}m radius');
+    debugPrint('Creating a geofence with ${model.radius}m radius');
 
     await NativeGeofenceManager.instance.createGeofence(
       Geofence(
         id: geofenceId,
-        location: Location(latitude: latitude, longitude: longitude),
-        radiusMeters: radius,
+        location: Location(
+          latitude: model.location!.latitude,
+          longitude: model.location!.longitude,
+        ),
+        radiusMeters: model.radius,
         triggers: {.enter},
         androidSettings: AndroidGeofenceSettings(
           initialTriggers: {GeofenceEvent.enter},
@@ -39,10 +36,11 @@ class RemindersService {
         .into(database.reminders)
         .insertReturning(
           RemindersCompanion.insert(
-            placeDescription: placeDescription,
+            placeDescription: model.location!.description,
+            onetime: model.onetime,
             geofenceId: geofenceId,
-            title: title,
-            note: note,
+            title: model.title,
+            note: model.note,
           ),
         );
 

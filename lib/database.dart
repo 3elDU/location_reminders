@@ -7,6 +7,7 @@ class Reminders extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get geofenceId => text()();
   TextColumn get placeDescription => text()();
+  BoolColumn get onetime => boolean()();
   TextColumn get title => text()();
   TextColumn get note => text()();
 }

@@ -8,11 +8,13 @@ class PendingNoteModel extends ChangeNotifier {
   Location? _location;
   String _note = '';
   double _radius = 150;
+  bool _onetime = false;
 
   String get title => _title;
   Location? get location => _location;
   String get note => _note;
   double get radius => _radius;
+  bool get onetime => _onetime;
 
   bool get isValid => _title.isNotEmpty && _location != null;
 
@@ -47,6 +49,11 @@ class PendingNoteModel extends ChangeNotifier {
 
   void updateNote(String note) {
     _note = note;
+    notifyListeners();
+  }
+
+  void updateOnetime(bool onetime) {
+    _onetime = onetime;
     notifyListeners();
   }
 }

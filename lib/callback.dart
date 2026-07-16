@@ -22,4 +22,9 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
 
   await notifications.init();
   notifications.showNotification(reminder.title, reminder.note);
+
+  if (reminder.onetime) {
+    // TODO: sync with list state, when app is open
+    await reminders.delete(reminder);
+  }
 }
