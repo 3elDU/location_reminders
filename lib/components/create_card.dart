@@ -12,6 +12,8 @@ class CreateNoteCard extends StatefulWidget {
 }
 
 class _CreateNoteCardState extends State<CreateNoteCard> {
+  final _radii = <double>[50, 150, 500, 3000];
+
   final _titleController = TextEditingController();
   final _noteController = TextEditingController();
 
@@ -57,6 +59,43 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
                 Icon(Icons.location_on_outlined),
                 Expanded(child: Text(location.description)),
                 IconButton(icon: Icon(Icons.edit), onPressed: _changeLocation),
+              ],
+            ),
+            Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.my_location_outlined),
+                Expanded(
+                  // LayoutBuilder is used here to specify a concrete non-infinite
+                  // width value, as with ifinite width the dropdown menu is
+                  // too wide and looks ugly.
+                  child: LayoutBuilder(
+                    builder: (_, constraints) {
+                      return DropdownMenu<double>(
+                        width: constraints.maxWidth,
+                        dropdownMenuEntries: _radii
+                            .map(
+                              (radius) => DropdownMenuEntry(
+                                value: radius,
+                                label: "${radius.toInt()} meters",
+                              ),
+                            )
+                            .toList(),
+                        initialSelection: _radii[1],
+                        onSelected: (radius) {
+                          if (radius == null) return;
+                          context.read<PendingNoteModel>().updateRadius(radius);
+                        },
+                        selectOnly: true,
+                        decorationBuilder: (_, _) => InputDecoration(
+                          constraints: BoxConstraints(maxHeight: 48),
+                          border: InputBorder.none,
+                          hintText: 'Radius',
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
             TextField(

@@ -14,6 +14,8 @@ class PendingNoteModel extends ChangeNotifier {
   String get note => _note;
   double get radius => _radius;
 
+  bool get isValid => _title.isNotEmpty && _location != null;
+
   void startCreation(Location location) {
     creating = true;
     _title = '';

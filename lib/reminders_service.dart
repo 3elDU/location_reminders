@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:location_reminders/callback.dart';
 import 'package:location_reminders/database.dart';
 import 'package:native_geofence/native_geofence.dart';
@@ -17,6 +18,8 @@ class RemindersService {
     required double radius,
   }) async {
     final geofenceId = "zone_${await database.reminders.count().getSingle()}";
+
+    debugPrint('Creating a geofence with ${radius}m radius');
 
     await NativeGeofenceManager.instance.createGeofence(
       Geofence(

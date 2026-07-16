@@ -129,6 +129,9 @@ class _HomePageState extends State<HomePage> {
     final creatingNote = context.select<PendingNoteModel, bool>(
       (model) => model.creating,
     );
+    final isValid = context.select<PendingNoteModel, bool>(
+      (model) => model.isValid,
+    );
     final showNoNotesLabel = !creatingNote && _reminders.isEmpty;
 
     return Scaffold(
@@ -146,7 +149,7 @@ class _HomePageState extends State<HomePage> {
       floatingActionButton: creatingNote
           ? FloatingActionButton(
               tooltip: 'Save note',
-              onPressed: _finishNoteCreation,
+              onPressed: isValid ? _finishNoteCreation : null,
               child: Icon(Icons.check),
             )
           : FloatingActionButton(
