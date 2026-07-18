@@ -14,7 +14,11 @@ class NotificationsService {
     );
   }
 
-  Future<void> showNotification(String title, String body) async {
+  Future<void> showNotification(
+    String title,
+    String body,
+    String? payload,
+  ) async {
     debugPrint('Sending notification with title "$title" and body "$body"');
     await _plugin.show(
       id: Random().nextInt(1048576),
@@ -26,7 +30,7 @@ class NotificationsService {
           styleInformation: BigTextStyleInformation(body, contentTitle: title),
         ),
       ),
-      payload: 'test',
+      payload: payload,
     );
   }
 }

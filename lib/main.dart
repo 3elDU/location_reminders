@@ -4,22 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:location_reminders/components/create_card.dart';
 import 'package:location_reminders/components/note.dart';
+import 'package:location_reminders/deeplink/notification_page.dart';
 import 'package:location_reminders/geocoding_service.dart';
 import 'package:location_reminders/models/pending_note_model.dart';
 import 'package:location_reminders/pages/debug.dart';
 import 'package:location_reminders/pages/location_picker.dart';
+import 'package:location_reminders/pages/reminder_details.dart';
 import 'package:location_reminders/reminders_service.dart';
 import 'package:native_geofence/native_geofence.dart' hide Location;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location_reminders/database.dart';
 import 'package:provider/provider.dart';
 
+final GlobalKey<NavigatorState> navigatorGlobalKey = GlobalKey();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // request location permission
   await Permission.location.request();
   await Permission.locationAlways.request();
 
+  // request notification permission
   final plugin = FlutterLocalNotificationsPlugin();
   plugin
       .resolvePlatformSpecificImplementation<
@@ -30,24 +36,83 @@ void main() async {
   await NativeGeofenceManager.instance.initialize();
 
   final database = AppDatabase();
-  runApp(RemindersApp(database));
+  runApp(RemindersApp(database: database));
 }
 
-class RemindersApp extends StatelessWidget {
+class RemindersApp extends StatefulWidget {
+  const RemindersApp({super.key, required this.database});
+
   final AppDatabase database;
 
-  const RemindersApp(this.database, {super.key});
+  @override
+  State<RemindersApp> createState() => _RemindersAppState();
+}
+
+class _RemindersAppState extends State<RemindersApp> {
+  late final RemindersService _remindersService;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _remindersService = RemindersService(widget.database);
+    _registerNotificationCallbacks();
+    _processAppLaunchDetails();
+  }
+
+  // if the app was launched by user pressing a notification, immediately push
+  // the notification details route
+  void _processAppLaunchDetails() async {
+    final launchDetails = await FlutterLocalNotificationsPlugin()
+        .getNotificationAppLaunchDetails();
+
+    // Immediately push notification details route, if app was launched through a notification
+    final deeplink = NotificationPageDeeplink.tryFromPayload(
+      launchDetails?.notificationResponse?.payload,
+    );
+    if (deeplink == null) return;
+
+    _openReminderDetails(deeplink.geofenceId);
+  }
+
+  // those callbacks will be fired if notification is tapped while the app is running
+  void _registerNotificationCallbacks() async {
+    await FlutterLocalNotificationsPlugin().initialize(
+      settings: InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      ),
+      onDidReceiveNotificationResponse: (details) {
+        final deeplink = NotificationPageDeeplink.tryFromPayload(
+          details.payload,
+        );
+        if (deeplink == null) return;
+
+        _openReminderDetails(deeplink.geofenceId);
+      },
+    );
+  }
+
+  void _openReminderDetails(String geofenceId) async {
+    final reminder = await _remindersService.find(geofenceId);
+    if (reminder == null || !mounted) return;
+
+    // post frame callback needed here because the widget isn't mounted yet at this point
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => ReminderDetailsPage.show(reminder),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) => MultiProvider(
         providers: [
-          Provider(create: (context) => RemindersService(database)),
+          Provider.value(value: _remindersService),
           Provider.value(value: GeocodingService()),
           ChangeNotifierProvider(create: (_) => PendingNoteModel()),
         ],
         child: MaterialApp(
+          navigatorKey: navigatorGlobalKey,
           title: 'Location Reminders',
           theme: ThemeData(
             colorScheme:
@@ -61,7 +126,10 @@ class RemindersApp extends StatelessWidget {
                   brightness: .dark,
                 ),
           ),
-          home: HomePage(title: 'Location Reminders', database: database),
+          home: HomePage(
+            title: 'Location Reminders',
+            database: widget.database,
+          ),
         ),
       ),
     );
@@ -101,7 +169,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _createNewNote() async {
-    final location = await LocationPickerPage.pick(context);
+    final location = await LocationPickerPage.pick();
 
     if (location == null || !mounted) return;
     context.read<PendingNoteModel>().startCreation(location);

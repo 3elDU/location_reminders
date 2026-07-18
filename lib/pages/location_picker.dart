@@ -6,21 +6,21 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart' hide Location;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:location_reminders/components/map.dart';
 import 'package:location_reminders/geocoding_service.dart';
+import 'package:location_reminders/main.dart';
 import 'package:location_reminders/models/location.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 class LocationPickerPage extends StatefulWidget {
   const LocationPickerPage({super.key, this.initialPosition});
 
   final Position? initialPosition;
 
-  static Future<Location?> pick(BuildContext context) async {
+  static Future<Location?> pick() async {
     final lastKnownPosition = await Geolocator.getLastKnownPosition();
 
-    if (!context.mounted) return null;
-    return Navigator.of(context).push<Location>(
+    return navigatorGlobalKey.currentState!.push<Location>(
       MaterialPageRoute(
         builder: (_) => LocationPickerPage(initialPosition: lastKnownPosition),
       ),
@@ -144,83 +144,24 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final darkMode = Theme.of(context).colorScheme.brightness == .dark;
-    final tileLayer = TileLayer(
-      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      userAgentPackageName: 'cc.petafloppa.location_reminders',
-      tileDisplay: TileDisplay.instantaneous(),
-    );
-
     return Scaffold(
       appBar: AppBar(title: Text('Pick a Location')),
       body: Stack(
         alignment: .bottomCenter,
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              backgroundColor: darkMode
-                  ? const Color(0xFF1F1F1F)
-                  : const Color(0xFFE0E0E0),
-              interactionOptions: InteractionOptions(
-                // disable rotation
-                flags: InteractiveFlag.all ^ InteractiveFlag.rotate,
-              ),
-              initialCenter: widget.initialPosition != null
-                  ? LatLng(
-                      widget.initialPosition!.latitude,
-                      widget.initialPosition!.longitude,
-                    )
-                  : const LatLng(50.5, 30.51),
-              initialZoom: 16,
-              onTap: (_, point) => _selectPoint(point),
-            ),
-            children: [
-              darkMode
-                  ? darkModeTilesContainerBuilder(context, tileLayer)
-                  : tileLayer,
-
-              if (_state == .locationSelected)
-                MarkerLayer(
-                  alignment: .topCenter,
-                  markers: [
-                    Marker(
-                      width: 48,
-                      height: 48,
-                      point: LatLng(_selected!.latitude, _selected!.longitude),
-                      child: Transform.translate(
-                        offset: Offset(0, 4),
-                        child: Stack(
-                          children: [
-                            Icon(
-                              Icons.location_pin,
-                              size: 48,
-                              color: darkMode ? Colors.black : Colors.white,
-                            ),
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 48,
-                              color: darkMode ? Colors.white : Colors.black,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-              Padding(
-                padding: const EdgeInsets.all(2),
-                child: Align(
-                  alignment: .topLeft,
-                  child: TextSourceAttribution(
-                    'OpenStreetMap contributors',
-                    onTap: () =>
-                        launchUrlString('https://openstreetmap.org/copyright'),
-                  ),
-                ),
-              ),
-            ],
+          WorldMap(
+            controller: _mapController,
+            initialPosition: widget.initialPosition != null
+                ? LatLng(
+                    widget.initialPosition!.latitude,
+                    widget.initialPosition!.longitude,
+                  )
+                : const LatLng(50.5, 30.51),
+            onTap: (_, point) => _selectPoint(point),
+            markerPosition: _state == .locationSelected
+                ? LatLng(_selected!.latitude, _selected!.longitude)
+                : null,
+            attributionAlignment: .topLeft,
           ),
           SafeArea(
             child: Padding(

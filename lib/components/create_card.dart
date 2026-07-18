@@ -23,7 +23,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
   }
 
   void _changeLocation() async {
-    final location = await LocationPickerPage.pick(context);
+    final location = await LocationPickerPage.pick();
     if (location == null || !mounted) return;
 
     context.read<PendingNoteModel>().updateLocation(location);

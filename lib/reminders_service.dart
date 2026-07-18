@@ -54,6 +54,14 @@ class RemindersService {
     )..where((r) => r.geofenceId.equals(geofenceId))).getSingleOrNull();
   }
 
+  /// Extract geolocation of note from the native geofence
+  Future<Location> getLocation(Reminder reminder) async {
+    final allGeofences = await NativeGeofenceManager.instance
+        .getRegisteredGeofences();
+
+    return allGeofences.firstWhere((g) => g.id == reminder.geofenceId).location;
+  }
+
   /// Delete a specific note
   Future<void> delete(Reminder reminder) async {
     await NativeGeofenceManager.instance.removeGeofenceById(

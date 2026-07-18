@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:location_reminders/database.dart';
+import 'package:location_reminders/deeplink/notification_page.dart';
 import 'package:location_reminders/notifications_service.dart';
 import 'package:location_reminders/reminders_service.dart';
 import 'package:native_geofence/native_geofence.dart';
@@ -21,7 +22,11 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   }
 
   await notifications.init();
-  notifications.showNotification(reminder.title, reminder.note);
+  notifications.showNotification(
+    reminder.title,
+    reminder.note,
+    NotificationPageDeeplink(reminder.geofenceId).toString(),
+  );
 
   if (reminder.onetime) {
     // TODO: sync with list state, when app is open
