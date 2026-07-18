@@ -12,12 +12,19 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 class LocationPickerPage extends StatefulWidget {
-  const LocationPickerPage({super.key});
+  const LocationPickerPage({super.key, this.initialPosition});
+
+  final Position? initialPosition;
 
   static Future<Location?> pick(BuildContext context) async {
-    return Navigator.of(
-      context,
-    ).push<Location>(MaterialPageRoute(builder: (_) => LocationPickerPage()));
+    final lastKnownPosition = await Geolocator.getLastKnownPosition();
+
+    if (!context.mounted) return null;
+    return Navigator.of(context).push<Location>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerPage(initialPosition: lastKnownPosition),
+      ),
+    );
   }
 
   @override
@@ -56,6 +63,10 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       );
 
       snackbar.close();
+
+      // don't move the map if the user has already selected a point while we were loading
+      if (_state != .empty) return;
+
       _mapController.move(LatLng(position.latitude, position.longitude), 16);
     } on TimeoutException catch (_) {
       if (mounted) {
@@ -155,11 +166,13 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                 // disable rotation
                 flags: InteractiveFlag.all ^ InteractiveFlag.rotate,
               ),
-              initialCenter: LatLng(
-                51.509364,
-                -0.128928,
-              ), // Center the map over London, UK
-              initialZoom: 9.2,
+              initialCenter: widget.initialPosition != null
+                  ? LatLng(
+                      widget.initialPosition!.latitude,
+                      widget.initialPosition!.longitude,
+                    )
+                  : const LatLng(50.5, 30.51),
+              initialZoom: 16,
               onTap: (_, point) => _selectPoint(point),
             ),
             children: [
