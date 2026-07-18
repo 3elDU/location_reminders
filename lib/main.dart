@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' hide Column;
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:location_reminders/components/create_card.dart';
@@ -39,16 +40,29 @@ class RemindersApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        Provider(create: (context) => RemindersService(database)),
-        Provider.value(value: GeocodingService()),
-        ChangeNotifierProvider(create: (_) => PendingNoteModel()),
-      ],
-      child: MaterialApp(
-        title: 'Location Reminders',
-        theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-        home: HomePage(title: 'Location Reminders', database: database),
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) => MultiProvider(
+        providers: [
+          Provider(create: (context) => RemindersService(database)),
+          Provider.value(value: GeocodingService()),
+          ChangeNotifierProvider(create: (_) => PendingNoteModel()),
+        ],
+        child: MaterialApp(
+          title: 'Location Reminders',
+          theme: ThemeData(
+            colorScheme:
+                lightDynamic ?? ColorScheme.fromSeed(seedColor: Colors.orange),
+          ),
+          darkTheme: ThemeData(
+            colorScheme:
+                darkDynamic ??
+                ColorScheme.fromSeed(
+                  seedColor: Colors.orange,
+                  brightness: .dark,
+                ),
+          ),
+          home: HomePage(title: 'Location Reminders', database: database),
+        ),
       ),
     );
   }
