@@ -36,6 +36,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
     );
 
     return Card.outlined(
+      margin: .zero,
       child: Padding(
         padding: EdgeInsetsGeometry.all(16),
         child: Column(

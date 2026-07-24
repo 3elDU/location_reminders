@@ -84,6 +84,20 @@
             "default_dart": null,
             "default_client_dart": null,
             "dsl_features": []
+          },
+          {
+            "name": "state",
+            "getter_name": "state",
+            "moor_type": "string",
+            "nullable": false,
+            "customConstraints": null,
+            "default_dart": null,
+            "default_client_dart": null,
+            "dsl_features": [],
+            "type_converter": {
+              "dart_expr": "const EnumNameConverter<ReminderState>(ReminderState.values)",
+              "dart_type_name": "ReminderState"
+            }
           }
         ],
         "is_virtual": false,
@@ -98,7 +112,7 @@
       "sql": [
         {
           "dialect": "sqlite",
-          "sql": "CREATE TABLE IF NOT EXISTS \"reminders\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"geofence_id\" TEXT NOT NULL, \"place_description\" TEXT NOT NULL, \"onetime\" INTEGER NOT NULL CHECK (\"onetime\" IN (0, 1)), \"title\" TEXT NOT NULL, \"note\" TEXT NOT NULL);"
+          "sql": "CREATE TABLE IF NOT EXISTS \"reminders\" (\"id\" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, \"geofence_id\" TEXT NOT NULL, \"place_description\" TEXT NOT NULL, \"onetime\" INTEGER NOT NULL CHECK (\"onetime\" IN (0, 1)), \"title\" TEXT NOT NULL, \"note\" TEXT NOT NULL, \"state\" TEXT NOT NULL);"
         }
       ]
     }

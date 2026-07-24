@@ -1,13 +1,12 @@
-import 'package:drift/drift.dart' hide Column;
-import 'package:dynamic_color/dynamic_color.dart';
+import 'package:dynamic_system_colors/dynamic_system_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:location_reminders/components/create_card.dart';
 import 'package:location_reminders/components/note.dart';
 import 'package:location_reminders/deeplink/notification_page.dart';
 import 'package:location_reminders/geocoding_service.dart';
 import 'package:location_reminders/models/pending_note_model.dart';
-import 'package:location_reminders/pages/debug.dart';
 import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/pages/reminder_details.dart';
 import 'package:location_reminders/reminders_service.dart';
@@ -126,10 +125,7 @@ class _RemindersAppState extends State<RemindersApp> {
                   brightness: .dark,
                 ),
           ),
-          home: HomePage(
-            title: 'Location Reminders',
-            database: widget.database,
-          ),
+          home: HomePage(),
         ),
       ),
     );
@@ -137,17 +133,16 @@ class _RemindersAppState extends State<RemindersApp> {
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.title, required this.database});
-
-  final AppDatabase database;
-  final String title;
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
+  ReminderState _filterByState = .active;
   List<Reminder> _reminders = [];
+  int _remindersCount = 0;
 
   @override
   void initState() {
@@ -156,15 +151,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _fetchReminders() async {
-    final reminders = await widget.database.reminders.all().get();
+    final service = context.read<RemindersService>();
+    final reminders = await service.all(states: [_filterByState]);
+    final remindersCount = await service.total();
 
     setState(() {
       _reminders = reminders;
+      _remindersCount = remindersCount;
     });
   }
 
   void _deleteNote(Reminder reminder) async {
-    await context.read<RemindersService>().delete(reminder);
+    await context.read<RemindersService>().complete(reminder);
     _fetchReminders();
   }
 
@@ -199,6 +197,38 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildEmptyState() => SizedBox.expand(
+    child: Column(
+      mainAxisAlignment: .center,
+      spacing: 16,
+      children: [
+        SvgPicture.asset('assets/note_stack_96.svg', width: 96, height: 96),
+        Text('No Reminders', style: Theme.of(context).textTheme.headlineMedium),
+        FilledButton.icon(
+          icon: Icon(Icons.add),
+          label: Text('Create Reminder'),
+          onPressed: _createNewNote,
+        ),
+      ],
+    ),
+  );
+
+  Widget? _buildFAB(bool emptyState, bool creatingNote, bool isValid) {
+    if (emptyState) return null;
+
+    return creatingNote
+        ? FloatingActionButton(
+            tooltip: 'Save note',
+            onPressed: isValid ? _finishNoteCreation : null,
+            child: Icon(Icons.check),
+          )
+        : FloatingActionButton(
+            tooltip: 'Add note',
+            onPressed: _createNewNote,
+            child: Icon(Icons.add),
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
     final creatingNote = context.select<PendingNoteModel, bool>(
@@ -207,49 +237,83 @@ class _HomePageState extends State<HomePage> {
     final isValid = context.select<PendingNoteModel, bool>(
       (model) => model.isValid,
     );
-    final showNoNotesLabel = !creatingNote && _reminders.isEmpty;
+    final emptyState =
+        !creatingNote && _remindersCount == 0 && _filterByState == .active;
 
     return Scaffold(
-      appBar: AppBar(
-        title: GestureDetector(
-          onLongPress: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => DebugPage()),
-            );
-          },
-          child: Text(widget.title),
-        ),
-      ),
-      floatingActionButton: creatingNote
-          ? FloatingActionButton(
-              tooltip: 'Save note',
-              onPressed: isValid ? _finishNoteCreation : null,
-              child: Icon(Icons.check),
-            )
-          : FloatingActionButton(
-              tooltip: 'Add note',
-              onPressed: _createNewNote,
-              child: Icon(Icons.add),
-            ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: showNoNotesLabel
-            ? Center(
-                child: Text(
-                  'No notes yet',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              )
-            : ListView(
+      floatingActionButton: _buildFAB(emptyState, creatingNote, isValid),
+      body: SafeArea(
+        child: emptyState
+            ? _buildEmptyState()
+            : Column(
+                crossAxisAlignment: .start,
+                spacing: 8,
                 children: [
-                  if (creatingNote)
-                    Dismissible(
-                      key: ValueKey('create-note-card'),
-                      onDismissed: (_) => _cancelNoteCreation(),
-                      child: CreateNoteCard(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SearchBar(
+                      elevation: WidgetStatePropertyAll(0),
+                      padding: WidgetStatePropertyAll(
+                        EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      leading: Icon(Icons.search),
+                      hintText: 'Search Reminders',
                     ),
-                  ..._reminders.map((r) => _buildReminderCard(r)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Wrap(
+                      spacing: 8,
+                      children: [
+                        ChoiceChip(
+                          label: Text('Active'),
+                          selected: _filterByState == .active,
+                          onSelected: (_) => setState(() {
+                            _filterByState = .active;
+                            _fetchReminders();
+                          }),
+                        ),
+                        ChoiceChip(
+                          label: Text('Postponed'),
+                          selected: _filterByState == .postponed,
+                          onSelected: (_) => setState(() {
+                            _filterByState = .postponed;
+                            _fetchReminders();
+                          }),
+                        ),
+                        ChoiceChip(
+                          label: Text('Completed'),
+                          selected: _filterByState == .completed,
+                          onSelected: (_) => setState(() {
+                            _filterByState = .completed;
+                            _fetchReminders();
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemCount: creatingNote
+                          ? _reminders.length + 1
+                          : _reminders.length,
+                      itemBuilder: (context, index) {
+                        if (creatingNote && index == 0) {
+                          return Dismissible(
+                            key: ValueKey('create-note-card'),
+                            onDismissed: (_) => _cancelNoteCreation(),
+                            child: CreateNoteCard(),
+                          );
+                        }
+
+                        return _buildReminderCard(
+                          _reminders[creatingNote ? index - 1 : index],
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
       ),

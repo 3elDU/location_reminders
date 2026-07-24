@@ -6,6 +6,7 @@ import 'package:location_reminders/main.dart';
 import 'package:location_reminders/reminders_service.dart';
 import 'package:native_geofence/native_geofence.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 class ReminderDetailsPage extends StatefulWidget {
   const ReminderDetailsPage({super.key, required this.model});
@@ -24,64 +25,75 @@ class ReminderDetailsPage extends StatefulWidget {
 
 class _ReminderDetailsPageState extends State<ReminderDetailsPage> {
   late Future<Location> _locationFuture;
+  bool _completed = false;
 
   @override
   void initState() {
     super.initState();
 
+    _completed = widget.model.state == .completed;
     _locationFuture = context.read<RemindersService>().getLocation(
       widget.model,
     );
   }
 
-  void _delete(BuildContext context) async {
-    final confirmation = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete this note'),
-        content: Text('Are you sure?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete'),
-          ),
-        ],
-      ),
-    );
-    if (!confirmation || !context.mounted) return;
+  void _complete(BuildContext context) async {
+    context.read<RemindersService>().complete(widget.model);
+    setState(() {
+      _completed = true;
+    });
+  }
 
-    context.read<RemindersService>().delete(widget.model);
-    Navigator.pop(context);
+  void _uncomplete(BuildContext context) async {
+    context.read<RemindersService>().uncomplete(widget.model);
+    setState(() {
+      _completed = false;
+    });
   }
 
   Widget _padded(Widget child) =>
       Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: child);
 
+  Widget _buildActionsStrip(Location? location) => Row(
+    spacing: 8,
+    children: [
+      FilledButton.icon(
+        icon: Icon(Icons.directions),
+        label: Text('Directions'),
+        onPressed: location == null
+            ? null
+            : () {
+                launchUrlString(
+                  'geo:0,0?q=${location.latitude},${location.longitude}(${widget.model.placeDescription})',
+                );
+              },
+      ),
+      FilledButton.tonalIcon(
+        onPressed: _completed
+            ? (() => _uncomplete(context))
+            : (() => _complete(context)),
+        icon: Icon(
+          _completed ? Icons.add_circle_outline : Icons.check_circle_outline,
+        ),
+        label: Text(_completed ? 'Uncomplete' : 'Complete'),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Reminder'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () => _delete(context),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text('Reminder')),
       body: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: 32),
         child: FutureBuilder(
           future: _locationFuture,
           builder: (context, snapshot) {
             final location = snapshot.data;
 
             return Column(
-              crossAxisAlignment: .start,
-              spacing: 16,
+              crossAxisAlignment: .stretch,
+              spacing: 12,
               children: [
                 SizedBox(
                   height: 320,
@@ -120,8 +132,17 @@ class _ReminderDetailsPageState extends State<ReminderDetailsPage> {
                     ],
                   ),
                 ),
-                Divider(),
-                _padded(Text(widget.model.note)),
+                _padded(_buildActionsStrip(location)),
+                _padded(
+                  Card.filled(
+                    margin: .zero,
+                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(widget.model.note),
+                    ),
+                  ),
+                ),
               ],
             );
           },

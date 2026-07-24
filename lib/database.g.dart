@@ -77,6 +77,15 @@ class $RemindersTable extends Reminders
     requiredDuringInsert: true,
   );
   @override
+  late final GeneratedColumnWithTypeConverter<ReminderState, String> state =
+      GeneratedColumn<String>(
+        'state',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<ReminderState>($RemindersTable.$converterstate);
+  @override
   List<GeneratedColumn> get $columns => [
     id,
     geofenceId,
@@ -84,6 +93,7 @@ class $RemindersTable extends Reminders
     onetime,
     title,
     note,
+    state,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -176,6 +186,12 @@ class $RemindersTable extends Reminders
         DriftSqlType.string,
         data['${effectivePrefix}note'],
       )!,
+      state: $RemindersTable.$converterstate.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}state'],
+        )!,
+      ),
     );
   }
 
@@ -183,6 +199,9 @@ class $RemindersTable extends Reminders
   $RemindersTable createAlias(String alias) {
     return $RemindersTable(attachedDatabase, alias);
   }
+
+  static JsonTypeConverter2<ReminderState, String, String> $converterstate =
+      const EnumNameConverter<ReminderState>(ReminderState.values);
 }
 
 class Reminder extends DataClass implements Insertable<Reminder> {
@@ -192,6 +211,7 @@ class Reminder extends DataClass implements Insertable<Reminder> {
   final bool onetime;
   final String title;
   final String note;
+  final ReminderState state;
   const Reminder({
     required this.id,
     required this.geofenceId,
@@ -199,6 +219,7 @@ class Reminder extends DataClass implements Insertable<Reminder> {
     required this.onetime,
     required this.title,
     required this.note,
+    required this.state,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -209,6 +230,11 @@ class Reminder extends DataClass implements Insertable<Reminder> {
     map['onetime'] = Variable<bool>(onetime);
     map['title'] = Variable<String>(title);
     map['note'] = Variable<String>(note);
+    {
+      map['state'] = Variable<String>(
+        $RemindersTable.$converterstate.toSql(state),
+      );
+    }
     return map;
   }
 
@@ -220,6 +246,7 @@ class Reminder extends DataClass implements Insertable<Reminder> {
       onetime: Value(onetime),
       title: Value(title),
       note: Value(note),
+      state: Value(state),
     );
   }
 
@@ -235,6 +262,9 @@ class Reminder extends DataClass implements Insertable<Reminder> {
       onetime: serializer.fromJson<bool>(json['onetime']),
       title: serializer.fromJson<String>(json['title']),
       note: serializer.fromJson<String>(json['note']),
+      state: $RemindersTable.$converterstate.fromJson(
+        serializer.fromJson<String>(json['state']),
+      ),
     );
   }
   @override
@@ -247,6 +277,9 @@ class Reminder extends DataClass implements Insertable<Reminder> {
       'onetime': serializer.toJson<bool>(onetime),
       'title': serializer.toJson<String>(title),
       'note': serializer.toJson<String>(note),
+      'state': serializer.toJson<String>(
+        $RemindersTable.$converterstate.toJson(state),
+      ),
     };
   }
 
@@ -257,6 +290,7 @@ class Reminder extends DataClass implements Insertable<Reminder> {
     bool? onetime,
     String? title,
     String? note,
+    ReminderState? state,
   }) => Reminder(
     id: id ?? this.id,
     geofenceId: geofenceId ?? this.geofenceId,
@@ -264,6 +298,7 @@ class Reminder extends DataClass implements Insertable<Reminder> {
     onetime: onetime ?? this.onetime,
     title: title ?? this.title,
     note: note ?? this.note,
+    state: state ?? this.state,
   );
   Reminder copyWithCompanion(RemindersCompanion data) {
     return Reminder(
@@ -277,6 +312,7 @@ class Reminder extends DataClass implements Insertable<Reminder> {
       onetime: data.onetime.present ? data.onetime.value : this.onetime,
       title: data.title.present ? data.title.value : this.title,
       note: data.note.present ? data.note.value : this.note,
+      state: data.state.present ? data.state.value : this.state,
     );
   }
 
@@ -288,14 +324,22 @@ class Reminder extends DataClass implements Insertable<Reminder> {
           ..write('placeDescription: $placeDescription, ')
           ..write('onetime: $onetime, ')
           ..write('title: $title, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('state: $state')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, geofenceId, placeDescription, onetime, title, note);
+  int get hashCode => Object.hash(
+    id,
+    geofenceId,
+    placeDescription,
+    onetime,
+    title,
+    note,
+    state,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -305,7 +349,8 @@ class Reminder extends DataClass implements Insertable<Reminder> {
           other.placeDescription == this.placeDescription &&
           other.onetime == this.onetime &&
           other.title == this.title &&
-          other.note == this.note);
+          other.note == this.note &&
+          other.state == this.state);
 }
 
 class RemindersCompanion extends UpdateCompanion<Reminder> {
@@ -315,6 +360,7 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
   final Value<bool> onetime;
   final Value<String> title;
   final Value<String> note;
+  final Value<ReminderState> state;
   const RemindersCompanion({
     this.id = const Value.absent(),
     this.geofenceId = const Value.absent(),
@@ -322,6 +368,7 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
     this.onetime = const Value.absent(),
     this.title = const Value.absent(),
     this.note = const Value.absent(),
+    this.state = const Value.absent(),
   });
   RemindersCompanion.insert({
     this.id = const Value.absent(),
@@ -330,11 +377,13 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
     required bool onetime,
     required String title,
     required String note,
+    required ReminderState state,
   }) : geofenceId = Value(geofenceId),
        placeDescription = Value(placeDescription),
        onetime = Value(onetime),
        title = Value(title),
-       note = Value(note);
+       note = Value(note),
+       state = Value(state);
   static Insertable<Reminder> custom({
     Expression<int>? id,
     Expression<String>? geofenceId,
@@ -342,6 +391,7 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
     Expression<bool>? onetime,
     Expression<String>? title,
     Expression<String>? note,
+    Expression<String>? state,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -350,6 +400,7 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
       if (onetime != null) 'onetime': onetime,
       if (title != null) 'title': title,
       if (note != null) 'note': note,
+      if (state != null) 'state': state,
     });
   }
 
@@ -360,6 +411,7 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
     Value<bool>? onetime,
     Value<String>? title,
     Value<String>? note,
+    Value<ReminderState>? state,
   }) {
     return RemindersCompanion(
       id: id ?? this.id,
@@ -368,6 +420,7 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
       onetime: onetime ?? this.onetime,
       title: title ?? this.title,
       note: note ?? this.note,
+      state: state ?? this.state,
     );
   }
 
@@ -392,6 +445,11 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (state.present) {
+      map['state'] = Variable<String>(
+        $RemindersTable.$converterstate.toSql(state.value),
+      );
+    }
     return map;
   }
 
@@ -403,7 +461,8 @@ class RemindersCompanion extends UpdateCompanion<Reminder> {
           ..write('placeDescription: $placeDescription, ')
           ..write('onetime: $onetime, ')
           ..write('title: $title, ')
-          ..write('note: $note')
+          ..write('note: $note, ')
+          ..write('state: $state')
           ..write(')'))
         .toString();
   }
@@ -428,6 +487,7 @@ typedef $$RemindersTableCreateCompanionBuilder =
       required bool onetime,
       required String title,
       required String note,
+      required ReminderState state,
     });
 typedef $$RemindersTableUpdateCompanionBuilder =
     RemindersCompanion Function({
@@ -437,6 +497,7 @@ typedef $$RemindersTableUpdateCompanionBuilder =
       Value<bool> onetime,
       Value<String> title,
       Value<String> note,
+      Value<ReminderState> state,
     });
 
 class $$RemindersTableFilterComposer
@@ -476,6 +537,12 @@ class $$RemindersTableFilterComposer
   ColumnFilters<String> get note => $composableBuilder(
     column: $table.note,
     builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<ReminderState, ReminderState, String>
+  get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 }
 
@@ -517,6 +584,11 @@ class $$RemindersTableOrderingComposer
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RemindersTableAnnotationComposer
@@ -549,6 +621,9 @@ class $$RemindersTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<ReminderState, String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
 }
 
 class $$RemindersTableTableManager
@@ -585,6 +660,7 @@ class $$RemindersTableTableManager
                 Value<bool> onetime = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String> note = const Value.absent(),
+                Value<ReminderState> state = const Value.absent(),
               }) => RemindersCompanion(
                 id: id,
                 geofenceId: geofenceId,
@@ -592,6 +668,7 @@ class $$RemindersTableTableManager
                 onetime: onetime,
                 title: title,
                 note: note,
+                state: state,
               ),
           createCompanionCallback:
               ({
@@ -601,6 +678,7 @@ class $$RemindersTableTableManager
                 required bool onetime,
                 required String title,
                 required String note,
+                required ReminderState state,
               }) => RemindersCompanion.insert(
                 id: id,
                 geofenceId: geofenceId,
@@ -608,6 +686,7 @@ class $$RemindersTableTableManager
                 onetime: onetime,
                 title: title,
                 note: note,
+                state: state,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

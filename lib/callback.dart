@@ -30,6 +30,6 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
 
   if (reminder.onetime) {
     // TODO: sync with list state, when app is open
-    await reminders.delete(reminder);
+    await reminders.complete(reminder);
   }
 }

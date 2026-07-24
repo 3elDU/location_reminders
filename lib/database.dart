@@ -3,6 +3,8 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 part 'database.g.dart';
 
+enum ReminderState { active, postponed, completed }
+
 class Reminders extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get geofenceId => text()();
@@ -10,6 +12,7 @@ class Reminders extends Table {
   BoolColumn get onetime => boolean()();
   TextColumn get title => text()();
   TextColumn get note => text()();
+  TextColumn get state => textEnum<ReminderState>()();
 }
 
 @DriftDatabase(tables: [Reminders])

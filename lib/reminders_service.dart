@@ -10,12 +10,8 @@ class RemindersService {
 
   RemindersService(this.database);
 
-  Future<Reminder> create(PendingNoteModel model) async {
-    final geofenceId = "zone_${await database.reminders.count().getSingle()}";
-
-    debugPrint('Creating a geofence with ${model.radius}m radius');
-
-    await NativeGeofenceManager.instance.createGeofence(
+  Future<void> _createGeofence(String geofenceId, PendingNoteModel model) {
+    return NativeGeofenceManager.instance.createGeofence(
       Geofence(
         id: geofenceId,
         location: Location(
@@ -31,6 +27,14 @@ class RemindersService {
       ),
       geofenceTriggered,
     );
+  }
+
+  Future<Reminder> create(PendingNoteModel model) async {
+    final geofenceId = "zone_${await database.reminders.count().getSingle()}";
+
+    debugPrint('Creating a geofence with ${model.radius}m radius');
+
+    await _createGeofence(geofenceId, model);
 
     final reminder = await database
         .into(database.reminders)
@@ -41,10 +45,23 @@ class RemindersService {
             geofenceId: geofenceId,
             title: model.title,
             note: model.note,
+            state: .active,
           ),
         );
 
     return reminder;
+  }
+
+  /// Count all reminders in the system
+  Future<int> total() {
+    return database.reminders.count().getSingle();
+  }
+
+  /// Get all reminders that match specified states
+  Future<List<Reminder>> all({List<ReminderState> states = const [.active]}) {
+    return (database.reminders.select()
+          ..where((r) => r.state.isInValues(states)))
+        .get();
   }
 
   /// Find a reminder, given the native geofence id
@@ -62,16 +79,17 @@ class RemindersService {
     return allGeofences.firstWhere((g) => g.id == reminder.geofenceId).location;
   }
 
-  /// Delete a specific note
-  Future<void> delete(Reminder reminder) async {
-    await NativeGeofenceManager.instance.removeGeofenceById(
-      reminder.geofenceId,
-    );
-    await database.delete(database.reminders).delete(reminder);
+  /// Mark a reminder completed
+  Future<Reminder> complete(Reminder reminder) async {
+    reminder = reminder.copyWith(state: .completed);
+    await database.reminders.replaceOne(reminder);
+    return reminder;
   }
 
-  Future<void> clear() async {
-    await NativeGeofenceManager.instance.removeAllGeofences();
-    await database.reminders.deleteAll();
+  /// Mark reminder as active again
+  Future<Reminder> uncomplete(Reminder reminder) async {
+    reminder = reminder.copyWith(state: .active);
+    await database.reminders.replaceOne(reminder);
+    return reminder;
   }
 }

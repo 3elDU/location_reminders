@@ -12,6 +12,7 @@ class NoteCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => ReminderDetailsPage.show(reminder),
       child: Card.outlined(
+        margin: .zero,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
