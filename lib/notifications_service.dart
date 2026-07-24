@@ -9,7 +9,7 @@ class NotificationsService {
   Future<void> init() async {
     await _plugin.initialize(
       settings: InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('@drawable/ic_stat_name'),
       ),
     );
   }
