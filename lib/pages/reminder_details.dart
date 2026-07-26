@@ -133,16 +133,17 @@ class _ReminderDetailsPageState extends State<ReminderDetailsPage> {
                   ),
                 ),
                 _padded(_buildActionsStrip(location)),
-                _padded(
-                  Card.filled(
-                    margin: .zero,
-                    color: Theme.of(context).colorScheme.surfaceContainer,
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text(widget.model.note),
+                if (widget.model.note.isNotEmpty)
+                  _padded(
+                    Card.filled(
+                      margin: .zero,
+                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text(widget.model.note),
+                      ),
                     ),
                   ),
-                ),
               ],
             );
           },
