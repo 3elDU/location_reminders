@@ -140,9 +140,10 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final _searchController = SearchController();
   ReminderState _filterByState = .active;
   List<Reminder> _reminders = [];
-  int _remindersCount = 0;
+  Map<ReminderState, int> _reminderCounts = {};
 
   @override
   void initState() {
@@ -152,12 +153,15 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _fetchReminders() async {
     final service = context.read<RemindersService>();
-    final reminders = await service.all(states: [_filterByState]);
-    final remindersCount = await service.total();
+    final reminders = await service.query(
+      states: [_filterByState],
+      search: _searchController.text.isNotEmpty ? _searchController.text : null,
+    );
+    final reminderCounts = await service.counts();
 
     setState(() {
       _reminders = reminders;
-      _remindersCount = remindersCount;
+      _reminderCounts = reminderCounts;
     });
   }
 
@@ -187,14 +191,20 @@ class _HomePageState extends State<HomePage> {
     _fetchReminders();
   }
 
-  Widget _buildReminderCard(Reminder reminder) {
-    return Dismissible(
-      key: ValueKey(reminder.id),
-      onDismissed: (_) {
-        _deleteNote(reminder);
-      },
-      child: NoteCard(reminder),
-    );
+  Widget _buildReminderCard(Reminder reminder, {bool dismissible = true}) {
+    final card = NoteCard(reminder, key: ValueKey(reminder.id));
+
+    if (dismissible) {
+      return Dismissible(
+        key: ValueKey(reminder.id),
+        onDismissed: (_) {
+          _deleteNote(reminder);
+        },
+        child: card,
+      );
+    }
+
+    return card;
   }
 
   Widget _buildEmptyState() => SizedBox.expand(
@@ -237,8 +247,10 @@ class _HomePageState extends State<HomePage> {
     final isValid = context.select<PendingNoteModel, bool>(
       (model) => model.isValid,
     );
+
+    final zeroReminders = _reminderCounts.entries.every((el) => el.value == 0);
     final emptyState =
-        !creatingNote && _remindersCount == 0 && _filterByState == .active;
+        !creatingNote && zeroReminders && _filterByState == .active;
 
     return Scaffold(
       floatingActionButton: _buildFAB(emptyState, creatingNote, isValid),
@@ -252,12 +264,25 @@ class _HomePageState extends State<HomePage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: SearchBar(
+                      controller: _searchController,
+                      onChanged: (_) => _fetchReminders(),
                       elevation: WidgetStatePropertyAll(0),
                       padding: WidgetStatePropertyAll(
                         EdgeInsets.symmetric(horizontal: 16),
                       ),
-                      leading: Icon(Icons.search),
                       hintText: 'Search Reminders',
+                      leading: Icon(Icons.search),
+                      trailing: _searchController.text.isNotEmpty
+                          ? [
+                              IconButton(
+                                icon: Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _fetchReminders();
+                                },
+                              ),
+                            ]
+                          : [],
                     ),
                   ),
                   Padding(
@@ -293,26 +318,48 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   Expanded(
-                    child: ListView.separated(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemCount: creatingNote
-                          ? _reminders.length + 1
-                          : _reminders.length,
-                      itemBuilder: (context, index) {
-                        if (creatingNote && index == 0) {
-                          return Dismissible(
-                            key: ValueKey('create-note-card'),
-                            onDismissed: (_) => _cancelNoteCreation(),
-                            child: CreateNoteCard(),
-                          );
-                        }
+                    child: _reminders.isEmpty
+                        ? Center(
+                            child: Text(
+                              // different texts when searching and just browsing
+                              _searchController.text.isNotEmpty
+                                  ? 'No Search Results'
+                                  : 'Empty List',
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 12),
+                            // all this index trickery needed because a new note creation widget is also part of list view
+                            itemCount: creatingNote
+                                ? _reminders.length + 1
+                                : _reminders.length,
+                            itemBuilder: (context, index) {
+                              // allow reminders to be swiped only when filtering by active
+                              final dismissible = _filterByState == .active;
 
-                        return _buildReminderCard(
-                          _reminders[creatingNote ? index - 1 : index],
-                        );
-                      },
-                    ),
+                              if (creatingNote && index == 0) {
+                                final card = CreateNoteCard(
+                                  key: ValueKey('create-note-card'),
+                                );
+
+                                return dismissible
+                                    ? Dismissible(
+                                        key: ValueKey('create-note-card'),
+                                        onDismissed: (_) =>
+                                            _cancelNoteCreation(),
+                                        child: card,
+                                      )
+                                    : card;
+                              }
+
+                              return _buildReminderCard(
+                                _reminders[creatingNote ? index - 1 : index],
+                                dismissible: dismissible,
+                              );
+                            },
+                          ),
                   ),
                 ],
               ),

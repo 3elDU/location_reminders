@@ -52,16 +52,39 @@ class RemindersService {
     return reminder;
   }
 
-  /// Count all reminders in the system
-  Future<int> total() {
-    return database.reminders.count().getSingle();
+  /// Count all reminders in the system, grouped by category
+  Future<Map<ReminderState, int>> counts() async {
+    final map = <ReminderState, int>{};
+
+    await database
+        .customSelect(
+          'select state, count(id) as count from reminders group by state',
+        )
+        .map((row) {
+          final state = ReminderState.values.byName(row.read<String>('state'));
+          final count = row.read<int>('count');
+
+          map[state] = count;
+        })
+        .get();
+
+    return map;
   }
 
-  /// Get all reminders that match specified states
-  Future<List<Reminder>> all({List<ReminderState> states = const [.active]}) {
-    return (database.reminders.select()
-          ..where((r) => r.state.isInValues(states)))
-        .get();
+  /// Get all reminders matching the query
+  Future<List<Reminder>> query({
+    List<ReminderState> states = const [.active],
+    String? search,
+  }) {
+    final query = database.reminders.select();
+
+    query.where((r) => r.state.isInValues(states));
+
+    if (search != null) {
+      query.where((r) => r.title.like('%$search%') | r.note.like('%$search%'));
+    }
+
+    return query.get();
   }
 
   /// Find a reminder, given the native geofence id
