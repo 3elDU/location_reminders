@@ -21,6 +21,8 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
     return;
   }
 
+  if (reminder.state != .active) return;
+
   await notifications.init();
   notifications.showNotification(
     reminder.title,
