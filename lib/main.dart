@@ -6,7 +6,8 @@ import 'package:location_reminders/components/create_card.dart';
 import 'package:location_reminders/components/note.dart';
 import 'package:location_reminders/deeplink/notification_page.dart';
 import 'package:location_reminders/geocoding_service.dart';
-import 'package:location_reminders/models/pending_note_model.dart';
+import 'package:location_reminders/models/pending_reminder.dart';
+import 'package:location_reminders/pages/debug.dart';
 import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/pages/reminder_details.dart';
 import 'package:location_reminders/reminders_service.dart';
@@ -108,7 +109,7 @@ class _RemindersAppState extends State<RemindersApp> {
         providers: [
           Provider.value(value: _remindersService),
           Provider.value(value: GeocodingService()),
-          ChangeNotifierProvider(create: (_) => PendingNoteModel()),
+          ChangeNotifierProvider(create: (_) => PendingReminderModel()),
         ],
         child: MaterialApp(
           navigatorKey: navigatorGlobalKey,
@@ -165,7 +166,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  void _deleteNote(Reminder reminder) async {
+  void _completeReminder(Reminder reminder) async {
     await context.read<RemindersService>().complete(reminder);
     _fetchReminders();
   }
@@ -174,15 +175,15 @@ class _HomePageState extends State<HomePage> {
     final location = await LocationPickerPage.pick();
 
     if (location == null || !mounted) return;
-    context.read<PendingNoteModel>().startCreation(location);
+    context.read<PendingReminderModel>().startCreation(location);
   }
 
   void _cancelNoteCreation() {
-    context.read<PendingNoteModel>().finishCreation();
+    context.read<PendingReminderModel>().finishCreation();
   }
 
   void _finishNoteCreation() async {
-    final model = context.read<PendingNoteModel>();
+    final model = context.read<PendingReminderModel>();
     final repository = context.read<RemindersService>();
 
     await repository.create(model);
@@ -198,7 +199,7 @@ class _HomePageState extends State<HomePage> {
       return Dismissible(
         key: ValueKey(reminder.id),
         onDismissed: (_) {
-          _deleteNote(reminder);
+          _completeReminder(reminder);
         },
         child: card,
       );
@@ -239,21 +240,26 @@ class _HomePageState extends State<HomePage> {
           );
   }
 
+  String _buildFilterChipLabel(String label, ReminderState type) {
+    final count = _reminderCounts[type];
+    return count == null || count == 0 ? label : '$label ($count)';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final creatingNote = context.select<PendingNoteModel, bool>(
+    final creatingReminder = context.select<PendingReminderModel, bool>(
       (model) => model.creating,
     );
-    final isValid = context.select<PendingNoteModel, bool>(
+    final isValid = context.select<PendingReminderModel, bool>(
       (model) => model.isValid,
     );
 
     final zeroReminders = _reminderCounts.entries.every((el) => el.value == 0);
     final emptyState =
-        !creatingNote && zeroReminders && _filterByState == .active;
+        !creatingReminder && zeroReminders && _filterByState == .active;
 
     return Scaffold(
-      floatingActionButton: _buildFAB(emptyState, creatingNote, isValid),
+      floatingActionButton: _buildFAB(emptyState, creatingReminder, isValid),
       body: SafeArea(
         child: emptyState
             ? _buildEmptyState()
@@ -263,26 +269,31 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SearchBar(
-                      controller: _searchController,
-                      onChanged: (_) => _fetchReminders(),
-                      elevation: WidgetStatePropertyAll(0),
-                      padding: WidgetStatePropertyAll(
-                        EdgeInsets.symmetric(horizontal: 16),
+                    child: GestureDetector(
+                      onLongPress: () => Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute(builder: (_) => DebugPage())),
+                      child: SearchBar(
+                        controller: _searchController,
+                        onChanged: (_) => _fetchReminders(),
+                        elevation: WidgetStatePropertyAll(0),
+                        padding: WidgetStatePropertyAll(
+                          EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                        hintText: 'Search Reminders',
+                        leading: Icon(Icons.search),
+                        trailing: _searchController.text.isNotEmpty
+                            ? [
+                                IconButton(
+                                  icon: Icon(Icons.clear),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _fetchReminders();
+                                  },
+                                ),
+                              ]
+                            : [],
                       ),
-                      hintText: 'Search Reminders',
-                      leading: Icon(Icons.search),
-                      trailing: _searchController.text.isNotEmpty
-                          ? [
-                              IconButton(
-                                icon: Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _fetchReminders();
-                                },
-                              ),
-                            ]
-                          : [],
                     ),
                   ),
                   Padding(
@@ -291,7 +302,7 @@ class _HomePageState extends State<HomePage> {
                       spacing: 8,
                       children: [
                         ChoiceChip(
-                          label: Text('Active'),
+                          label: Text(_buildFilterChipLabel('Active', .active)),
                           selected: _filterByState == .active,
                           onSelected: (_) => setState(() {
                             _filterByState = .active;
@@ -299,7 +310,9 @@ class _HomePageState extends State<HomePage> {
                           }),
                         ),
                         ChoiceChip(
-                          label: Text('Postponed'),
+                          label: Text(
+                            _buildFilterChipLabel('Postponed', .postponed),
+                          ),
                           selected: _filterByState == .postponed,
                           onSelected: (_) => setState(() {
                             _filterByState = .postponed;
@@ -307,7 +320,9 @@ class _HomePageState extends State<HomePage> {
                           }),
                         ),
                         ChoiceChip(
-                          label: Text('Completed'),
+                          label: Text(
+                            _buildFilterChipLabel('Completed', .completed),
+                          ),
                           selected: _filterByState == .completed,
                           onSelected: (_) => setState(() {
                             _filterByState = .completed;
@@ -318,7 +333,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   Expanded(
-                    child: _reminders.isEmpty
+                    child: !creatingReminder && _reminders.isEmpty
                         ? Center(
                             child: Text(
                               // different texts when searching and just browsing
@@ -331,16 +346,16 @@ class _HomePageState extends State<HomePage> {
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             separatorBuilder: (_, _) =>
                                 const SizedBox(height: 12),
-                            // all this index trickery needed because a new note creation widget is also part of list view
-                            itemCount: creatingNote
+                            // all this index trickery needed because a new reminder creation widget is also part of list view
+                            itemCount: creatingReminder
                                 ? _reminders.length + 1
                                 : _reminders.length,
                             itemBuilder: (context, index) {
                               // allow reminders to be swiped only when filtering by active
                               final dismissible = _filterByState == .active;
 
-                              if (creatingNote && index == 0) {
-                                final card = CreateNoteCard(
+                              if (creatingReminder && index == 0) {
+                                final card = CreateReminderCard(
                                   key: ValueKey('create-note-card'),
                                 );
 
@@ -355,7 +370,9 @@ class _HomePageState extends State<HomePage> {
                               }
 
                               return _buildReminderCard(
-                                _reminders[creatingNote ? index - 1 : index],
+                                _reminders[creatingReminder
+                                    ? index - 1
+                                    : index],
                                 dismissible: dismissible,
                               );
                             },

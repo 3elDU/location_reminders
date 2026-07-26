@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:location_reminders/models/location.dart';
-import 'package:location_reminders/models/pending_note_model.dart';
+import 'package:location_reminders/models/pending_reminder.dart';
 import 'package:location_reminders/pages/location_picker.dart';
 import 'package:provider/provider.dart';
 
-class CreateNoteCard extends StatefulWidget {
-  const CreateNoteCard({super.key});
+class CreateReminderCard extends StatefulWidget {
+  const CreateReminderCard({super.key});
 
   @override
-  State<CreateNoteCard> createState() => _CreateNoteCardState();
+  State<CreateReminderCard> createState() => _CreateReminderCardState();
 }
 
-class _CreateNoteCardState extends State<CreateNoteCard> {
+class _CreateReminderCardState extends State<CreateReminderCard> {
   final _radii = <double>[50, 150, 500, 3000];
 
   final _titleController = TextEditingController();
@@ -26,12 +26,12 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
     final location = await LocationPickerPage.pick();
     if (location == null || !mounted) return;
 
-    context.read<PendingNoteModel>().updateLocation(location);
+    context.read<PendingReminderModel>().updateLocation(location);
   }
 
   @override
   Widget build(BuildContext context) {
-    final location = context.select<PendingNoteModel, Location>(
+    final location = context.select<PendingReminderModel, Location>(
       (model) => model.location!,
     );
 
@@ -50,7 +50,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
               ),
               style: Theme.of(context).textTheme.headlineMedium,
               onChanged: (text) {
-                context.read<PendingNoteModel>().updateTitle(text);
+                context.read<PendingReminderModel>().updateTitle(text);
               },
             ),
             Row(
@@ -92,7 +92,9 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
                         initialSelection: _radii[1],
                         onSelected: (radius) {
                           if (radius == null) return;
-                          context.read<PendingNoteModel>().updateRadius(radius);
+                          context.read<PendingReminderModel>().updateRadius(
+                            radius,
+                          );
                         },
                         selectOnly: true,
                         decorationBuilder: (_, _) => InputDecoration(
@@ -107,7 +109,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
                 ),
               ],
             ),
-            Selector<PendingNoteModel, bool>(
+            Selector<PendingReminderModel, bool>(
               selector: (_, model) => model.onetime,
               // TODO: do something with the ripple effect
               builder: (_, onetime, _) => CheckboxListTile(
@@ -116,7 +118,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
                 value: onetime,
                 contentPadding: EdgeInsets.only(right: 8),
                 onChanged: (value) {
-                  context.read<PendingNoteModel>().updateOnetime(
+                  context.read<PendingReminderModel>().updateOnetime(
                     value ?? false,
                   );
                 },
@@ -131,7 +133,7 @@ class _CreateNoteCardState extends State<CreateNoteCard> {
               minLines: 2,
               maxLines: 10,
               onChanged: (text) {
-                context.read<PendingNoteModel>().updateNote(text);
+                context.read<PendingReminderModel>().updateNote(text);
               },
             ),
           ],

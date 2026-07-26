@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:location_reminders/callback.dart';
 import 'package:location_reminders/database.dart';
-import 'package:location_reminders/models/pending_note_model.dart';
+import 'package:location_reminders/models/pending_reminder.dart';
 import 'package:native_geofence/native_geofence.dart';
 
 class RemindersService {
@@ -10,7 +10,7 @@ class RemindersService {
 
   RemindersService(this.database);
 
-  Future<void> _createGeofence(String geofenceId, PendingNoteModel model) {
+  Future<void> _createGeofence(String geofenceId, PendingReminderModel model) {
     return NativeGeofenceManager.instance.createGeofence(
       Geofence(
         id: geofenceId,
@@ -29,7 +29,7 @@ class RemindersService {
     );
   }
 
-  Future<Reminder> create(PendingNoteModel model) async {
+  Future<Reminder> create(PendingReminderModel model) async {
     final geofenceId = "zone_${await database.reminders.count().getSingle()}";
 
     debugPrint('Creating a geofence with ${model.radius}m radius');
@@ -81,7 +81,12 @@ class RemindersService {
     query.where((r) => r.state.isInValues(states));
 
     if (search != null) {
-      query.where((r) => r.title.like('%$search%') | r.note.like('%$search%'));
+      query.where(
+        (r) =>
+            r.title.like('%$search%') |
+            r.note.like('%$search%') |
+            r.placeDescription.like('%$search%'),
+      );
     }
 
     return query.get();
@@ -94,7 +99,7 @@ class RemindersService {
     )..where((r) => r.geofenceId.equals(geofenceId))).getSingleOrNull();
   }
 
-  /// Extract geolocation of note from the native geofence
+  /// Extract geolocation of a reminder from the native geofence
   Future<Location> getLocation(Reminder reminder) async {
     final allGeofences = await NativeGeofenceManager.instance
         .getRegisteredGeofences();

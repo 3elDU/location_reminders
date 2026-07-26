@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:location_reminders/models/location.dart';
 
-class PendingNoteModel extends ChangeNotifier {
+class PendingReminderModel extends ChangeNotifier {
   bool creating = false;
 
   String _title = '';
