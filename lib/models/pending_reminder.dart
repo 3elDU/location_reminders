@@ -1,7 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:location_reminders/models/location.dart';
+import 'package:location_reminders/models/reminder_list.dart';
+import 'package:location_reminders/services/database.dart';
 
 class PendingReminderModel extends ChangeNotifier {
+  final DatabaseService _database;
+  final ReminderListModel? list;
+  PendingReminderModel(this._database, {this.list});
+
   bool creating = false;
 
   String _title = '';
@@ -27,9 +33,12 @@ class PendingReminderModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void finishCreation() {
+  void finishCreation() async {
     creating = false;
     notifyListeners();
+
+    await _database.create(this);
+    list?.markChanged();
   }
 
   void updateLocation(Location location) {

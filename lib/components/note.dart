@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:location_reminders/database.dart';
-import 'package:location_reminders/pages/reminder_details.dart';
 
 class NoteCard extends StatelessWidget {
-  const NoteCard(this.reminder, {super.key});
+  const NoteCard(this.reminder, {super.key, this.onTap});
 
+  final void Function()? onTap;
   final Reminder reminder;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => ReminderDetailsPage.show(reminder),
+      onTap: onTap,
       child: Card.outlined(
         margin: .zero,
         child: Padding(

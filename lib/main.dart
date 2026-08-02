@@ -5,12 +5,14 @@ import 'package:flutter_svg/svg.dart';
 import 'package:location_reminders/components/create_card.dart';
 import 'package:location_reminders/components/note.dart';
 import 'package:location_reminders/deeplink/notification_page.dart';
-import 'package:location_reminders/geocoding_service.dart';
+import 'package:location_reminders/models/reminder_handle.dart';
+import 'package:location_reminders/services/geocoding.dart';
 import 'package:location_reminders/models/pending_reminder.dart';
+import 'package:location_reminders/models/reminder_list.dart';
 import 'package:location_reminders/pages/debug.dart';
 import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/pages/reminder_details.dart';
-import 'package:location_reminders/reminders_service.dart';
+import 'package:location_reminders/services/database.dart';
 import 'package:native_geofence/native_geofence.dart' hide Location;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location_reminders/database.dart';
@@ -49,13 +51,13 @@ class RemindersApp extends StatefulWidget {
 }
 
 class _RemindersAppState extends State<RemindersApp> {
-  late final RemindersService _remindersService;
+  late final DatabaseService _database;
 
   @override
   void initState() {
     super.initState();
 
-    _remindersService = RemindersService(widget.database);
+    _database = DatabaseService(widget.database);
     _registerNotificationCallbacks();
     _processAppLaunchDetails();
   }
@@ -93,13 +95,19 @@ class _RemindersAppState extends State<RemindersApp> {
   }
 
   void _openReminderDetails(String geofenceId) async {
-    final reminder = await _remindersService.find(geofenceId);
+    final reminder = await _database.find(geofenceId);
     if (reminder == null || !mounted) return;
 
     // post frame callback needed here because the widget isn't mounted yet at this point
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => ReminderDetailsPage.show(reminder),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ReminderDetailsPage.show(
+        ReminderHandle(
+          reminder: reminder,
+          list: context.read<ReminderListModel>(),
+          database: _database,
+        ),
+      );
+    });
   }
 
   @override
@@ -107,9 +115,14 @@ class _RemindersAppState extends State<RemindersApp> {
     return DynamicColorBuilder(
       builder: (lightDynamic, darkDynamic) => MultiProvider(
         providers: [
-          Provider.value(value: _remindersService),
+          Provider.value(value: _database),
           Provider.value(value: GeocodingService()),
-          ChangeNotifierProvider(create: (_) => PendingReminderModel()),
+          ChangeNotifierProvider(create: (_) => ReminderListModel(_database)),
+          ChangeNotifierProxyProvider<ReminderListModel, PendingReminderModel>(
+            create: (_) => PendingReminderModel(_database),
+            update: (context, value, previous) =>
+                PendingReminderModel(_database, list: value),
+          ),
         ],
         child: MaterialApp(
           navigatorKey: navigatorGlobalKey,
@@ -142,33 +155,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _searchController = SearchController();
-  ReminderState _filterByState = .active;
-  List<Reminder> _reminders = [];
-  Map<ReminderState, int> _reminderCounts = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchReminders();
-  }
-
-  Future<void> _fetchReminders() async {
-    final service = context.read<RemindersService>();
-    final reminders = await service.query(
-      states: [_filterByState],
-      search: _searchController.text.isNotEmpty ? _searchController.text : null,
-    );
-    final reminderCounts = await service.counts();
-
-    setState(() {
-      _reminders = reminders;
-      _reminderCounts = reminderCounts;
-    });
-  }
 
   void _completeReminder(Reminder reminder) async {
-    await context.read<RemindersService>().complete(reminder);
-    _fetchReminders();
+    await context.read<DatabaseService>().complete(reminder);
   }
 
   void _createNewNote() async {
@@ -183,17 +172,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _finishNoteCreation() async {
-    final model = context.read<PendingReminderModel>();
-    final repository = context.read<RemindersService>();
-
-    await repository.create(model);
-
-    model.finishCreation();
-    _fetchReminders();
+    context.read<PendingReminderModel>().finishCreation();
   }
 
-  Widget _buildReminderCard(Reminder reminder, {bool dismissible = true}) {
-    final card = NoteCard(reminder, key: ValueKey(reminder.id));
+  Widget _buildReminderCard(
+    ReminderListModel model,
+    int index, {
+    bool dismissible = true,
+  }) {
+    final reminder = model.list[index];
+    final card = NoteCard(
+      reminder,
+      key: ValueKey(reminder.id),
+      onTap: () {
+        ReminderDetailsPage.show(model.getHandle(index));
+      },
+    );
 
     if (dismissible) {
       return Dismissible(
@@ -240,8 +234,12 @@ class _HomePageState extends State<HomePage> {
           );
   }
 
-  String _buildFilterChipLabel(String label, ReminderState type) {
-    final count = _reminderCounts[type];
+  String _buildFilterChipLabel(
+    Map<ReminderState, int> counts,
+    String label,
+    ReminderState type,
+  ) {
+    final count = counts[type];
     return count == null || count == 0 ? label : '$label ($count)';
   }
 
@@ -254,9 +252,14 @@ class _HomePageState extends State<HomePage> {
       (model) => model.isValid,
     );
 
-    final zeroReminders = _reminderCounts.entries.every((el) => el.value == 0);
+    final reminders = context.watch<ReminderListModel>();
+
+    final zeroReminders = reminders.counts.entries.every((el) => el.value == 0);
     final emptyState =
-        !creatingReminder && zeroReminders && _filterByState == .active;
+        !creatingReminder &&
+        zeroReminders &&
+        reminders.filter == .active &&
+        reminders.query.isEmpty;
 
     return Scaffold(
       floatingActionButton: _buildFAB(emptyState, creatingReminder, isValid),
@@ -275,7 +278,7 @@ class _HomePageState extends State<HomePage> {
                       ).push(MaterialPageRoute(builder: (_) => DebugPage())),
                       child: SearchBar(
                         controller: _searchController,
-                        onChanged: (_) => _fetchReminders(),
+                        onChanged: (query) => reminders.setSearchQuery(query),
                         elevation: WidgetStatePropertyAll(0),
                         padding: WidgetStatePropertyAll(
                           EdgeInsets.symmetric(horizontal: 16),
@@ -288,7 +291,7 @@ class _HomePageState extends State<HomePage> {
                                   icon: Icon(Icons.clear),
                                   onPressed: () {
                                     _searchController.clear();
-                                    _fetchReminders();
+                                    reminders.setSearchQuery('');
                                   },
                                 ),
                               ]
@@ -302,38 +305,49 @@ class _HomePageState extends State<HomePage> {
                       spacing: 8,
                       children: [
                         ChoiceChip(
-                          label: Text(_buildFilterChipLabel('Active', .active)),
-                          selected: _filterByState == .active,
+                          label: Text(
+                            _buildFilterChipLabel(
+                              reminders.counts,
+                              'Active',
+                              .active,
+                            ),
+                          ),
+                          selected: reminders.filter == .active,
                           onSelected: (_) => setState(() {
-                            _filterByState = .active;
-                            _fetchReminders();
+                            reminders.setFilter(.active);
                           }),
                         ),
                         ChoiceChip(
                           label: Text(
-                            _buildFilterChipLabel('Postponed', .postponed),
+                            _buildFilterChipLabel(
+                              reminders.counts,
+                              'Postponed',
+                              .postponed,
+                            ),
                           ),
-                          selected: _filterByState == .postponed,
+                          selected: reminders.filter == .postponed,
                           onSelected: (_) => setState(() {
-                            _filterByState = .postponed;
-                            _fetchReminders();
+                            reminders.setFilter(.postponed);
                           }),
                         ),
                         ChoiceChip(
                           label: Text(
-                            _buildFilterChipLabel('Completed', .completed),
+                            _buildFilterChipLabel(
+                              reminders.counts,
+                              'Completed',
+                              .completed,
+                            ),
                           ),
-                          selected: _filterByState == .completed,
+                          selected: reminders.filter == .completed,
                           onSelected: (_) => setState(() {
-                            _filterByState = .completed;
-                            _fetchReminders();
+                            reminders.setFilter(.completed);
                           }),
                         ),
                       ],
                     ),
                   ),
                   Expanded(
-                    child: !creatingReminder && _reminders.isEmpty
+                    child: !creatingReminder && reminders.list.isEmpty
                         ? Center(
                             child: Text(
                               // different texts when searching and just browsing
@@ -346,13 +360,15 @@ class _HomePageState extends State<HomePage> {
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             separatorBuilder: (_, _) =>
                                 const SizedBox(height: 12),
-                            // all this index trickery needed because a new reminder creation widget is also part of list view
-                            itemCount: creatingReminder
-                                ? _reminders.length + 1
-                                : _reminders.length,
+                            itemCount: reminders.loading
+                                ? 0
+                                : (creatingReminder
+                                      // all this index trickery needed because a new reminder creation widget is also part of list view
+                                      ? reminders.list.length + 1
+                                      : reminders.list.length),
                             itemBuilder: (context, index) {
                               // allow reminders to be swiped only when filtering by active
-                              final dismissible = _filterByState == .active;
+                              final dismissible = reminders.filter == .active;
 
                               if (creatingReminder && index == 0) {
                                 final card = CreateReminderCard(
@@ -370,9 +386,8 @@ class _HomePageState extends State<HomePage> {
                               }
 
                               return _buildReminderCard(
-                                _reminders[creatingReminder
-                                    ? index - 1
-                                    : index],
+                                reminders,
+                                creatingReminder ? index - 1 : index,
                                 dismissible: dismissible,
                               );
                             },

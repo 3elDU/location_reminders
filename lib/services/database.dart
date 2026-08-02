@@ -1,14 +1,15 @@
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:location_reminders/callback.dart';
 import 'package:location_reminders/database.dart';
 import 'package:location_reminders/models/pending_reminder.dart';
 import 'package:native_geofence/native_geofence.dart';
 
-class RemindersService {
+/// Abstracts away database management and geofence creation
+class DatabaseService {
   final AppDatabase database;
 
-  RemindersService(this.database);
+  DatabaseService(this.database);
 
   Future<void> _createGeofence(String geofenceId, PendingReminderModel model) {
     return NativeGeofenceManager.instance.createGeofence(
@@ -89,6 +90,7 @@ class RemindersService {
       );
     }
 
+    query.orderBy([(u) => OrderingTerm.desc(u.id)]);
     return query.get();
   }
 
@@ -111,6 +113,7 @@ class RemindersService {
   Future<Reminder> complete(Reminder reminder) async {
     reminder = reminder.copyWith(state: .completed);
     await database.reminders.replaceOne(reminder);
+
     return reminder;
   }
 
@@ -118,6 +121,7 @@ class RemindersService {
   Future<Reminder> uncomplete(Reminder reminder) async {
     reminder = reminder.copyWith(state: .active);
     await database.reminders.replaceOne(reminder);
+
     return reminder;
   }
 }

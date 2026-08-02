@@ -7,7 +7,7 @@ import 'package:geocoding/geocoding.dart' hide Location;
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location_reminders/components/map.dart';
-import 'package:location_reminders/geocoding_service.dart';
+import 'package:location_reminders/services/geocoding.dart';
 import 'package:location_reminders/main.dart';
 import 'package:location_reminders/models/location.dart';
 import 'package:provider/provider.dart';
