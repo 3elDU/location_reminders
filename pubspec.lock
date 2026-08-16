@@ -281,6 +281,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  fl_location:
+    dependency: transitive
+    description:
+      name: fl_location
+      sha256: "8c8ef3e862dae66fd1d8dfcf53ed14da4d50d3da0e33eab2b5fa1dc697de9eb5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.0"
+  fl_location_platform_interface:
+    dependency: transitive
+    description:
+      name: fl_location_platform_interface
+      sha256: bd730e65248dec7d4fb37d18ea36c6ffe54f8dda6f9d0308c4ddc0d24e8f8c3f
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.0"
+  fl_location_web:
+    dependency: transitive
+    description:
+      name: fl_location_web
+      sha256: "203777c6d52fe525d01cf53e571840d6d3585c8ce7d0072dcb4df6404e085146"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -294,6 +318,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  flutter_foreground_task:
+    dependency: "direct main"
+    description:
+      name: flutter_foreground_task
+      sha256: "0dad7e6a4ac57aeb0e680e35ec7ae997f1a2b8579fdb85b16dd16e299b634f4f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "10.0.0"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -408,6 +440,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
+  geofencing_api:
+    dependency: "direct main"
+    description:
+      name: geofencing_api
+      sha256: "9f559767fb658028acafd2678892d2a6667570b42f3ee20db18cc0aaa143006a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   geolocator:
     dependency: "direct main"
     description:
@@ -912,6 +952,62 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
+  shared_preferences:
+    dependency: "direct main"
+    description:
+      name: shared_preferences
+      sha256: c3025c5534b01739267eb7d76959bbc25a6d10f6988e1c2a3036940133dd10bf
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.5.5"
+  shared_preferences_android:
+    dependency: transitive
+    description:
+      name: shared_preferences_android
+      sha256: "0634e64bd719f89c012f392938e173521f535d3ecaf66558fa94a056d22b5cc7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.27"
+  shared_preferences_foundation:
+    dependency: transitive
+    description:
+      name: shared_preferences_foundation
+      sha256: "4e7eaffc2b17ba398759f1151415869a34771ba11ebbccd1b0145472a619a64f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.5.6"
+  shared_preferences_linux:
+    dependency: transitive
+    description:
+      name: shared_preferences_linux
+      sha256: "580abfd40f415611503cae30adf626e6656dfb2f0cee8f465ece7b6defb40f2f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.1"
+  shared_preferences_platform_interface:
+    dependency: transitive
+    description:
+      name: shared_preferences_platform_interface
+      sha256: "649dc798a33931919ea356c4305c2d1f81619ea6e92244070b520187b5140ef9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.2"
+  shared_preferences_web:
+    dependency: transitive
+    description:
+      name: shared_preferences_web
+      sha256: c49bd060261c9a3f0ff445892695d6212ff603ef3115edbb448509d407600019
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.3"
+  shared_preferences_windows:
+    dependency: transitive
+    description:
+      name: shared_preferences_windows
+      sha256: "94ef0f72b2d71bc3e700e025db3710911bd51a71cefb65cc609dd0d9a982e3c1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.1"
   shelf:
     dependency: transitive
     description:
@@ -1126,13 +1222,13 @@ packages:
     source: hosted
     version: "3.1.5"
   uuid:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: uuid
-      sha256: "1fef9e8e11e2991bb773070d4656b7bd5d850967a2456cfc83cf47925ba79489"
+      sha256: "9b129329f58692f6e6578329498a8fe9fbe98f090beb764ffbb8ee2eadd01dcd"
       url: "https://pub.dev"
     source: hosted
-    version: "4.5.3"
+    version: "4.6.0"
   vector_graphics:
     dependency: transitive
     description:

@@ -15,7 +15,7 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   // TODO: figure out when android can send multiple items there
   final geofence = params.geofences.first;
 
-  final reminder = await reminders.find(geofence.id);
+  final reminder = await reminders.findReminder(geofence.id);
   if (reminder == null) {
     debugPrint('Reminder not found in database: ${geofence.id}');
     return;
@@ -27,7 +27,7 @@ Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   notifications.showNotification(
     reminder.title,
     reminder.note,
-    NotificationPageDeeplink(reminder.geofenceId).toString(),
+    NotificationPageDeeplink(geofence.id).toString(),
   );
 
   if (reminder.onetime) {

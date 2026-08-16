@@ -3,11 +3,20 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 part 'database.g.dart';
 
+class Geofences extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get geofenceId => text()();
+  TextColumn get placeDescription => text()();
+  RealColumn get latitude => real()();
+  RealColumn get longitude => real()();
+  RealColumn get radius => real()();
+}
+
 enum ReminderState { active, postponed, completed }
 
 class Reminders extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get geofenceId => text()();
+  IntColumn get geofenceId => integer().references(Geofences, #id)();
   TextColumn get placeDescription => text()();
   BoolColumn get onetime => boolean()();
   TextColumn get title => text()();

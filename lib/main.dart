@@ -95,7 +95,7 @@ class _RemindersAppState extends State<RemindersApp> {
   }
 
   void _openReminderDetails(String geofenceId) async {
-    final reminder = await _database.find(geofenceId);
+    final reminder = await _database.findReminder(geofenceId);
     if (reminder == null || !mounted) return;
 
     // post frame callback needed here because the widget isn't mounted yet at this point
