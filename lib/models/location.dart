@@ -17,4 +17,7 @@ class Location {
   double latitude;
   double longitude;
   String description;
+
+  bool get isNotEmpty =>
+      latitude != 0 && longitude != 0 && description.isNotEmpty;
 }

@@ -32,7 +32,7 @@ class _CreateReminderCardState extends State<CreateReminderCard> {
   @override
   Widget build(BuildContext context) {
     final location = context.select<PendingReminderModel, Location>(
-      (model) => model.location!,
+      (model) => model.location,
     );
 
     return Card.outlined(
@@ -58,8 +58,13 @@ class _CreateReminderCardState extends State<CreateReminderCard> {
               crossAxisAlignment: .center,
               children: [
                 Icon(Icons.location_on_outlined),
-                Expanded(child: Text(location.description)),
-                // a little padding on the right to align horizontally with other icons
+                Expanded(
+                  child: Text(
+                    location.description,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+                // a little padding on the right to align ,horizontally with other icons
                 Padding(
                   padding: const EdgeInsets.only(right: 4),
                   child: IconButton(

@@ -3,9 +3,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:location_reminders/components/map.dart';
 import 'package:location_reminders/database.dart';
 import 'package:location_reminders/main.dart';
+import 'package:location_reminders/models/location.dart';
 import 'package:location_reminders/models/reminder_handle.dart';
 import 'package:location_reminders/services/database.dart';
-import 'package:native_geofence/native_geofence.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -26,7 +26,7 @@ class ReminderDetailsPage extends StatefulWidget {
 }
 
 class _ReminderDetailsPageState extends State<ReminderDetailsPage> {
-  Location? _location = null;
+  Location? _location;
 
   @override
   void initState() {

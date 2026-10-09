@@ -1,64 +1,49 @@
 import 'package:drift/drift.dart';
 import 'package:flutter/widgets.dart';
-import 'package:location_reminders/callback.dart';
 import 'package:location_reminders/database.dart';
+import 'package:location_reminders/models/location.dart';
 import 'package:location_reminders/models/pending_reminder.dart';
-import 'package:native_geofence/native_geofence.dart' as native_geofence;
+import 'package:location_reminders/services/geofence/backend.dart';
 import 'package:uuid/uuid.dart';
 
 /// Abstracts away database management and geofence creation
 class DatabaseService {
   final AppDatabase database;
+  final GeofencingProvider? geofencing;
 
-  DatabaseService(this.database);
+  DatabaseService({required this.database, this.geofencing});
 
-  Future<Geofence> _createGeofence(
-    String geofenceId,
-    PendingReminderModel model,
-  ) async {
+  Future<Geofence> _createGeofence(PendingReminderModel model) async {
     final geofence = await database
         .into(database.geofences)
         .insertReturning(
           GeofencesCompanion.insert(
-            geofenceId: geofenceId,
-            placeDescription: model.location!.description,
-            latitude: model.location!.latitude,
-            longitude: model.location!.longitude,
+            geofenceId: model.geofence.id,
+            placeDescription: model.location.description,
+            latitude: model.location.latitude,
+            longitude: model.location.longitude,
             radius: model.radius,
           ),
         );
 
-    await native_geofence.NativeGeofenceManager.instance.createGeofence(
-      native_geofence.Geofence(
-        id: geofenceId,
-        location: native_geofence.Location(
-          latitude: model.location!.latitude,
-          longitude: model.location!.longitude,
-        ),
-        radiusMeters: model.radius,
-        triggers: {.enter},
-        androidSettings: native_geofence.AndroidGeofenceSettings(
-          initialTriggers: {native_geofence.GeofenceEvent.enter},
-        ),
-        iosSettings: native_geofence.IosGeofenceSettings(),
-      ),
-      geofenceTriggered,
-    );
+    await geofencing?.createGeofence(model.geofence);
 
     return geofence;
   }
 
-  Future<Reminder> create(PendingReminderModel model) async {
-    final geofenceId = Uuid().v7();
+  String getNextGeofenceId() {
+    return Uuid().v7();
+  }
 
+  Future<Reminder> create(PendingReminderModel model) async {
     debugPrint('Creating a geofence with ${model.radius}m radius');
 
-    final geofence = await _createGeofence(geofenceId, model);
+    final geofence = await _createGeofence(model);
     final reminder = await database
         .into(database.reminders)
         .insertReturning(
           RemindersCompanion.insert(
-            placeDescription: model.location!.description,
+            placeDescription: model.location.description,
             onetime: model.onetime,
             geofenceId: geofence.id,
             title: model.title,
@@ -134,14 +119,13 @@ class DatabaseService {
   }
 
   /// Extract geolocation of a reminder from the native geofence
-  Future<native_geofence.Location> getLocation(Reminder reminder) async {
-    final allGeofences = await native_geofence.NativeGeofenceManager.instance
-        .getRegisteredGeofences();
-
+  Future<Location> getLocation(Reminder reminder) async {
     final geofence = await findGeofenceById(reminder.geofenceId);
-    return allGeofences
-        .firstWhere((g) => g.id == geofence!.geofenceId)
-        .location;
+    return Location(
+      latitude: geofence!.latitude,
+      longitude: geofence.longitude,
+      description: geofence.placeDescription,
+    );
   }
 
   /// Mark a reminder completed

@@ -13,7 +13,7 @@ import 'package:location_reminders/pages/debug.dart';
 import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/pages/reminder_details.dart';
 import 'package:location_reminders/services/database.dart';
-import 'package:native_geofence/native_geofence.dart' hide Location;
+import 'package:location_reminders/services/geofence/backend.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:location_reminders/database.dart';
 import 'package:provider/provider.dart';
@@ -35,16 +35,24 @@ void main() async {
       >()!
       .requestNotificationsPermission();
 
-  await NativeGeofenceManager.instance.initialize();
+  final geoBackend = GeofencingBackend();
+  final geofencing = (await geoBackend.readGeofencePreference()).implementation;
+  await geofencing.init();
 
   final database = AppDatabase();
-  runApp(RemindersApp(database: database));
+
+  runApp(RemindersApp(database: database, geofencing: geofencing));
 }
 
 class RemindersApp extends StatefulWidget {
-  const RemindersApp({super.key, required this.database});
+  const RemindersApp({
+    super.key,
+    required this.database,
+    required this.geofencing,
+  });
 
   final AppDatabase database;
+  final GeofencingProvider geofencing;
 
   @override
   State<RemindersApp> createState() => _RemindersAppState();
@@ -57,7 +65,10 @@ class _RemindersAppState extends State<RemindersApp> {
   void initState() {
     super.initState();
 
-    _database = DatabaseService(widget.database);
+    _database = DatabaseService(
+      database: widget.database,
+      geofencing: widget.geofencing,
+    );
     _registerNotificationCallbacks();
     _processAppLaunchDetails();
   }

@@ -9,7 +9,7 @@ import 'package:native_geofence/native_geofence.dart';
 Future<void> geofenceTriggered(GeofenceCallbackParams params) async {
   debugPrint('Geofence triggered with params: $params');
 
-  final reminders = DatabaseService(AppDatabase());
+  final reminders = DatabaseService(database: AppDatabase());
   final notifications = NotificationsService();
 
   // TODO: figure out when android can send multiple items there
