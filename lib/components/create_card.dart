@@ -20,6 +20,9 @@ class _CreateReminderCardState extends State<CreateReminderCard> {
   @override
   void initState() {
     super.initState();
+
+    _titleController.text = context.read<PendingReminderModel>().title;
+    _noteController.text = context.read<PendingReminderModel>().note;
   }
 
   void _changeLocation() async {
@@ -94,7 +97,9 @@ class _CreateReminderCardState extends State<CreateReminderCard> {
                               ),
                             )
                             .toList(),
-                        initialSelection: _radii[1],
+                        initialSelection: context
+                            .read<PendingReminderModel>()
+                            .radius,
                         onSelected: (radius) {
                           if (radius == null) return;
                           context.read<PendingReminderModel>().updateRadius(

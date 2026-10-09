@@ -31,7 +31,13 @@ class PendingReminderModel extends ChangeNotifier {
     _title = '';
     _note = '';
     _geofence = Geofence.empty(_database);
+    _geofence.location = location;
 
+    notifyListeners();
+  }
+
+  void cancelCreation() {
+    creating = false;
     notifyListeners();
   }
 

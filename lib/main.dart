@@ -129,10 +129,11 @@ class _RemindersAppState extends State<RemindersApp> {
           Provider.value(value: _database),
           Provider.value(value: GeocodingService()),
           ChangeNotifierProvider(create: (_) => ReminderListModel(_database)),
-          ChangeNotifierProxyProvider<ReminderListModel, PendingReminderModel>(
-            create: (_) => PendingReminderModel(_database),
-            update: (context, value, previous) =>
-                PendingReminderModel(_database, list: value),
+          ChangeNotifierProvider<PendingReminderModel>(
+            create: (context) => PendingReminderModel(
+              _database,
+              list: context.read<ReminderListModel>(),
+            ),
           ),
         ],
         child: MaterialApp(
@@ -179,7 +180,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _cancelNoteCreation() {
-    context.read<PendingReminderModel>().finishCreation();
+    context.read<PendingReminderModel>().cancelCreation();
   }
 
   void _finishNoteCreation() async {
