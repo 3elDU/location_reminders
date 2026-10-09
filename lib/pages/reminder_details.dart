@@ -65,13 +65,9 @@ class _ReminderDetailsPageState extends State<ReminderDetailsPage> {
             ? (() => widget.handle.uncomplete())
             : (() => widget.handle.complete()),
         icon: Icon(
-          widget.model.state == .completed
-              ? Icons.add_circle_outline
-              : Icons.check_circle_outline,
+          widget.model.state == .completed ? Icons.restore : Icons.check,
         ),
-        label: Text(
-          widget.model.state == .completed ? 'Uncomplete' : 'Complete',
-        ),
+        label: Text(widget.model.state == .completed ? 'Restore' : 'Complete'),
       ),
     ],
   );

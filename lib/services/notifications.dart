@@ -19,7 +19,6 @@ class NotificationsService {
     String body,
     String? payload,
   ) async {
-    debugPrint('Sending notification with title "$title" and body "$body"');
     await _plugin.show(
       id: Random().nextInt(1048576),
       title: title,

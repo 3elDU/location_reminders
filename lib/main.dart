@@ -332,19 +332,6 @@ class _HomePageState extends State<HomePage> {
                           label: Text(
                             _buildFilterChipLabel(
                               reminders.counts,
-                              'Postponed',
-                              .postponed,
-                            ),
-                          ),
-                          selected: reminders.filter == .postponed,
-                          onSelected: (_) => setState(() {
-                            reminders.setFilter(.postponed);
-                          }),
-                        ),
-                        ChoiceChip(
-                          label: Text(
-                            _buildFilterChipLabel(
-                              reminders.counts,
                               'Completed',
                               .completed,
                             ),

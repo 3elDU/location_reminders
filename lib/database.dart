@@ -12,7 +12,7 @@ class Geofences extends Table {
   RealColumn get radius => real()();
 }
 
-enum ReminderState { active, postponed, completed }
+enum ReminderState { active, completed }
 
 class Reminders extends Table {
   IntColumn get id => integer().autoIncrement()();
