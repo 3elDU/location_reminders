@@ -81,7 +81,9 @@ class DatabaseService {
   }) {
     final query = database.reminders.select();
 
-    query.where((r) => r.state.isInValues(states));
+    if (states.isNotEmpty) {
+      query.where((r) => r.state.isInValues(states));
+    }
 
     if (search != null) {
       query.where(

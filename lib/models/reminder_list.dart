@@ -24,16 +24,14 @@ class ReminderListModel extends ChangeNotifier {
   bool get loading => _loading;
   ReminderState get filter => _filter;
   String get query => _query;
+  bool get searchQueryPresent => _query.isNotEmpty;
 
   Map<ReminderState, int> _countFetchedReminders() {
     final Map<ReminderState, int> map = {};
 
     for (final reminder in _reminders) {
-      if (map.containsKey(reminder.state)) {
-        map[reminder.state] = map[reminder.state]! + 1;
-      } else {
-        map[reminder.state] = 1;
-      }
+      print("${reminder.title}: ${reminder.state.toString()}");
+      map.update(reminder.state, (value) => value + 1, ifAbsent: () => 1);
     }
 
     return map;
@@ -43,16 +41,24 @@ class ReminderListModel extends ChangeNotifier {
     _loading = true;
     notifyListeners();
 
+    print('query present: $searchQueryPresent; query: "$query"');
+
     _reminders = await _database.query(
-      states: [_filter],
-      search: _query.isNotEmpty ? query : null,
+      // HACK:
+      // when a search query is present, perform filtering by state after the
+      // count, so that the reminder counts are visible for every category.
+      states: searchQueryPresent ? [] : [_filter],
+      search: searchQueryPresent ? query : null,
     );
 
-    // if the search query is not empty, count the reminders matched by it.
-    // otherwise, count all the reminder in the database.
-    _counts = query.isNotEmpty
+    // with a non-empty search query, count only the reminders matched by it.
+    _counts = searchQueryPresent
         ? _countFetchedReminders()
         : await _database.counts();
+
+    if (searchQueryPresent) {
+      _reminders.retainWhere((el) => el.state == _filter);
+    }
 
     _loading = false;
     notifyListeners();

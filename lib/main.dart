@@ -271,7 +271,7 @@ class _HomePageState extends State<HomePage> {
         !creatingReminder &&
         zeroReminders &&
         reminders.filter == .active &&
-        reminders.query.isEmpty;
+        !reminders.searchQueryPresent;
 
     return Scaffold(
       floatingActionButton: _buildFAB(emptyState, creatingReminder, isValid),
