@@ -14,7 +14,7 @@ import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/pages/reminder_details.dart';
 import 'package:location_reminders/services/database.dart';
 import 'package:location_reminders/services/geofence/backend.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:location_reminders/services/permission.dart';
 import 'package:location_reminders/database.dart';
 import 'package:provider/provider.dart';
 
@@ -23,17 +23,9 @@ final GlobalKey<NavigatorState> navigatorGlobalKey = GlobalKey();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // request location permission
-  await Permission.location.request();
-  await Permission.locationAlways.request();
-
-  // request notification permission
-  final plugin = FlutterLocalNotificationsPlugin();
-  plugin
-      .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >()!
-      .requestNotificationsPermission();
+  await PermissionService.requestLocation();
+  await PermissionService.requestBackgroundLocation();
+  await PermissionService.requestNotifications();
 
   final geoBackend = GeofencingBackend();
   final geofencing = (await geoBackend.readGeofencePreference()).implementation;
