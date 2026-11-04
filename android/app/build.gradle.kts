@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "cc.petafloppa.location_reminders"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

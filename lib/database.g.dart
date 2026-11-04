@@ -1159,7 +1159,7 @@ class $$GeofencesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$GeofencesTable, Geofence>(table),
                   $$GeofencesTableReferences(db, table, e),
                 ),
               )
@@ -1172,10 +1172,11 @@ class $$GeofencesTableTableManager
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (remindersRefs)
-                    await $_getPrefetchedData<
+                    await $_getPrefetchedDataByColumns<
                       Geofence,
                       $GeofencesTable,
-                      Reminder
+                      Reminder,
+                      $RemindersTable
                     >(
                       currentTable: table,
                       referencedTable: $$GeofencesTableReferences
@@ -1186,8 +1187,8 @@ class $$GeofencesTableTableManager
                             table,
                             p0,
                           ).remindersRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.geofenceId == item.id),
+                      currentColumn: 'id',
+                      referencedColumn: 'geofence_id',
                       typedResults: items,
                     ),
                 ];
@@ -1500,7 +1501,7 @@ class $$RemindersTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$RemindersTable, Reminder>(table),
                   $$RemindersTableReferences(db, table, e),
                 ),
               )
