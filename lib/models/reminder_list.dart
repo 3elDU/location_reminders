@@ -30,7 +30,6 @@ class ReminderListModel extends ChangeNotifier {
     final Map<ReminderState, int> map = {};
 
     for (final reminder in _reminders) {
-      print("${reminder.title}: ${reminder.state.toString()}");
       map.update(reminder.state, (value) => value + 1, ifAbsent: () => 1);
     }
 
@@ -40,8 +39,6 @@ class ReminderListModel extends ChangeNotifier {
   void _refresh() async {
     _loading = true;
     notifyListeners();
-
-    print('query present: $searchQueryPresent; query: "$query"');
 
     _reminders = await _database.query(
       // HACK:
