@@ -7,9 +7,13 @@ class NotificationPageDeeplink {
   static NotificationPageDeeplink? tryFromPayload(String? payload) {
     if (payload == null) return null;
 
-    final match = RegExp(r'^\/notes\/(zone_\d+)$').firstMatch(payload);
+    final match = RegExp(r'^\/notes\/([0-9a-f-]+)$').firstMatch(payload);
 
-    return match != null ? NotificationPageDeeplink(match[1]!) : null;
+    if (match == null || match.groupCount != 1) {
+      return null;
+    }
+
+    return NotificationPageDeeplink(match[1]!);
   }
 
   @override

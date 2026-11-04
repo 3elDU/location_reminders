@@ -5,7 +5,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:location_reminders/components/create_card.dart';
 import 'package:location_reminders/components/note.dart';
 import 'package:location_reminders/deeplink/notification_page.dart';
-import 'package:location_reminders/models/reminder_handle.dart';
 import 'package:location_reminders/pages/welcome.dart';
 import 'package:location_reminders/services/geocoding.dart';
 import 'package:location_reminders/models/pending_reminder.dart';
@@ -119,13 +118,7 @@ class _RemindersAppState extends State<RemindersApp> {
 
     // post frame callback needed here because the widget isn't mounted yet at this point
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ReminderDetailsPage.show(
-        ReminderHandle(
-          reminder: reminder,
-          list: context.read<ReminderListModel>(),
-          database: _database,
-        ),
-      );
+      _homepageGlobalKey.currentState!.openReminderDetails(reminder);
     });
   }
 
@@ -159,7 +152,7 @@ class _RemindersAppState extends State<RemindersApp> {
                   brightness: .dark,
                 ),
           ),
-          home: HomePage(),
+          home: HomePage(key: _homepageGlobalKey),
         ),
       ),
     );
@@ -173,8 +166,17 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+final GlobalKey<_HomePageState> _homepageGlobalKey = GlobalKey();
+
 class _HomePageState extends State<HomePage> {
   final _searchController = SearchController();
+
+  // Called by the parent app component
+  void openReminderDetails(Reminder reminder) {
+    ReminderDetailsPage.show(
+      context.read<ReminderListModel>().createHandle(reminder),
+    );
+  }
 
   void _completeReminder(Reminder reminder) async {
     await context.read<DatabaseService>().complete(reminder);

@@ -85,4 +85,7 @@ class ReminderListModel extends ChangeNotifier {
     list: this,
     database: _database,
   );
+
+  ReminderHandle createHandle(Reminder reminder) =>
+      ReminderHandle(reminder: reminder, list: this, database: _database);
 }
