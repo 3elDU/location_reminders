@@ -6,6 +6,7 @@ import 'package:location_reminders/components/create_card.dart';
 import 'package:location_reminders/components/note.dart';
 import 'package:location_reminders/deeplink/notification_page.dart';
 import 'package:location_reminders/models/reminder_handle.dart';
+import 'package:location_reminders/pages/welcome.dart';
 import 'package:location_reminders/services/geocoding.dart';
 import 'package:location_reminders/models/pending_reminder.dart';
 import 'package:location_reminders/models/reminder_list.dart';
@@ -14,18 +15,14 @@ import 'package:location_reminders/pages/location_picker.dart';
 import 'package:location_reminders/pages/reminder_details.dart';
 import 'package:location_reminders/services/database.dart';
 import 'package:location_reminders/services/geofence/backend.dart';
-import 'package:location_reminders/services/permission.dart';
 import 'package:location_reminders/database.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 final GlobalKey<NavigatorState> navigatorGlobalKey = GlobalKey();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await PermissionService.requestLocation();
-  await PermissionService.requestBackgroundLocation();
-  await PermissionService.requestNotifications();
 
   final geoBackend = GeofencingBackend();
   final geofencing = (await geoBackend.readGeofencePreference()).implementation;
@@ -52,15 +49,34 @@ class RemindersApp extends StatefulWidget {
 
 class _RemindersAppState extends State<RemindersApp> {
   late final DatabaseService _database;
+  final _sharedPrefs = SharedPreferencesAsync();
+
+  Future<bool?> get onboardingCompleted =>
+      _sharedPrefs.getBool('onboardingCompleted');
 
   @override
   void initState() {
     super.initState();
 
+    onboardingCompleted.then((completed) async {
+      if (completed == true) return;
+
+      bool? allGranted;
+      while (allGranted != true) {
+        allGranted = await WelcomePage.show();
+      }
+
+      await _sharedPrefs.setBool('onboardingCompleted', true);
+      navigatorGlobalKey.currentState!.push(
+        MaterialPageRoute(builder: (_) => HomePage()),
+      );
+    });
+
     _database = DatabaseService(
       database: widget.database,
       geofencing: widget.geofencing,
     );
+
     _registerNotificationCallbacks();
     _processAppLaunchDetails();
   }

@@ -4,12 +4,17 @@ import 'package:permission_handler/permission_handler.dart';
 
 class PermissionDescription {
   const PermissionDescription(
-    final String name,
-    final String description,
-    final String reasonForUse,
-    // Returns true if granted
-    final Future<bool> Function() request,
+    this.name,
+    this.description,
+    this.reasonForUse,
+    this.request,
   );
+
+  final String name;
+  final String description;
+  final String reasonForUse;
+  // Returns true if granted
+  final Future<bool> Function() request;
 }
 
 // Manages Android permissions
@@ -19,25 +24,24 @@ class PermissionService {
     "location": PermissionDescription(
       "Location",
       "Access location while the app is open",
-      "To center the map at your location",
+      "Used to automatically center the map at your location",
       requestLocation,
     ),
     "background_location": PermissionDescription(
       "Background Location",
       "Access your location while the app is in background",
-      "To check, which reminders are close to you",
+      "Used to check, which reminders are close to you",
       requestBackgroundLocation,
     ),
     "notification": PermissionDescription(
       "Notifications",
       "Send you notifications",
-      "To send you reminders",
+      "Used to send you the reminders",
       requestNotifications,
     ),
   };
 
-  // Checks if the app has all necessary permissions, and returns the list of missing ones
-  static Future<List<PermissionDescription>> checkHasAllPermissions() async {
+  static Future<List<PermissionDescription>> get missingPermissions async {
     List<PermissionDescription> missing = [];
 
     final locationStatus = await Permission.location.status;
