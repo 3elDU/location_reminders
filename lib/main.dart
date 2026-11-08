@@ -15,6 +15,7 @@ import 'package:location_reminders/pages/reminder_details.dart';
 import 'package:location_reminders/services/database.dart';
 import 'package:location_reminders/services/geofence/backend.dart';
 import 'package:location_reminders/database.dart';
+import 'package:location_reminders/xnopyt.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -170,6 +171,7 @@ final GlobalKey<_HomePageState> _homepageGlobalKey = GlobalKey();
 
 class _HomePageState extends State<HomePage> {
   final _searchController = SearchController();
+  final _xnopytController = XnopytController();
 
   // Called by the parent app component
   void openReminderDetails(Reminder reminder) {
@@ -195,6 +197,18 @@ class _HomePageState extends State<HomePage> {
 
   void _finishNoteCreation() async {
     context.read<PendingReminderModel>().finishCreation();
+  }
+
+  void _search(ReminderListModel model, String query) async {
+    if (query.trim().toLowerCase() == 'xnopyt') {
+      _disintegrateAtTheThoughtOfXnopyt();
+    } else {
+      model.setSearchQuery(query);
+    }
+  }
+
+  Future<void> _disintegrateAtTheThoughtOfXnopyt() async {
+    _xnopytController.xnopyt();
   }
 
   Widget _buildReminderCard(
@@ -283,127 +297,130 @@ class _HomePageState extends State<HomePage> {
         reminders.filter == .active &&
         !reminders.searchQueryPresent;
 
-    return Scaffold(
-      floatingActionButton: _buildFAB(emptyState, creatingReminder, isValid),
-      body: SafeArea(
-        child: emptyState
-            ? _buildEmptyState()
-            : Column(
-                crossAxisAlignment: .start,
-                spacing: 8,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GestureDetector(
-                      onLongPress: () => Navigator.of(
-                        context,
-                      ).push(MaterialPageRoute(builder: (_) => DebugPage())),
-                      child: SearchBar(
-                        controller: _searchController,
-                        onChanged: (query) => reminders.setSearchQuery(query),
-                        elevation: WidgetStatePropertyAll(0),
-                        padding: WidgetStatePropertyAll(
-                          EdgeInsets.symmetric(horizontal: 16),
+    return Xnopyt(
+      controller: _xnopytController,
+      child: Scaffold(
+        floatingActionButton: _buildFAB(emptyState, creatingReminder, isValid),
+        body: SafeArea(
+          child: emptyState
+              ? _buildEmptyState()
+              : Column(
+                  crossAxisAlignment: .start,
+                  spacing: 8,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: GestureDetector(
+                        onLongPress: () => Navigator.of(
+                          context,
+                        ).push(MaterialPageRoute(builder: (_) => DebugPage())),
+                        child: SearchBar(
+                          controller: _searchController,
+                          onChanged: (query) => _search(reminders, query),
+                          elevation: WidgetStatePropertyAll(0),
+                          padding: WidgetStatePropertyAll(
+                            EdgeInsets.symmetric(horizontal: 16),
+                          ),
+                          hintText: 'Search Reminders',
+                          leading: Icon(Icons.search),
+                          trailing: _searchController.text.isNotEmpty
+                              ? [
+                                  IconButton(
+                                    icon: Icon(Icons.clear),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      reminders.setSearchQuery('');
+                                    },
+                                  ),
+                                ]
+                              : [],
                         ),
-                        hintText: 'Search Reminders',
-                        leading: Icon(Icons.search),
-                        trailing: _searchController.text.isNotEmpty
-                            ? [
-                                IconButton(
-                                  icon: Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    reminders.setSearchQuery('');
-                                  },
-                                ),
-                              ]
-                            : [],
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Wrap(
-                      spacing: 8,
-                      children: [
-                        ChoiceChip(
-                          label: Text(
-                            _buildFilterChipLabel(
-                              reminders.counts,
-                              'Active',
-                              .active,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: Text(
+                              _buildFilterChipLabel(
+                                reminders.counts,
+                                'Active',
+                                .active,
+                              ),
                             ),
+                            selected: reminders.filter == .active,
+                            onSelected: (_) => setState(() {
+                              reminders.setFilter(.active);
+                            }),
                           ),
-                          selected: reminders.filter == .active,
-                          onSelected: (_) => setState(() {
-                            reminders.setFilter(.active);
-                          }),
-                        ),
-                        ChoiceChip(
-                          label: Text(
-                            _buildFilterChipLabel(
-                              reminders.counts,
-                              'Completed',
-                              .completed,
+                          ChoiceChip(
+                            label: Text(
+                              _buildFilterChipLabel(
+                                reminders.counts,
+                                'Completed',
+                                .completed,
+                              ),
                             ),
+                            selected: reminders.filter == .completed,
+                            onSelected: (_) => setState(() {
+                              reminders.setFilter(.completed);
+                            }),
                           ),
-                          selected: reminders.filter == .completed,
-                          onSelected: (_) => setState(() {
-                            reminders.setFilter(.completed);
-                          }),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: !creatingReminder && reminders.list.isEmpty
-                        ? Center(
-                            child: Text(
-                              // different texts when searching and just browsing
-                              _searchController.text.isNotEmpty
-                                  ? 'No Search Results'
-                                  : 'Empty List',
-                            ),
-                          )
-                        : ListView.separated(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 12),
-                            itemCount: reminders.loading
-                                ? 0
-                                : (creatingReminder
-                                      // all this index trickery needed because a new reminder creation widget is also part of list view
-                                      ? reminders.list.length + 1
-                                      : reminders.list.length),
-                            itemBuilder: (context, index) {
-                              // allow reminders to be swiped only when filtering by active
-                              final dismissible = reminders.filter == .active;
+                    Expanded(
+                      child: !creatingReminder && reminders.list.isEmpty
+                          ? Center(
+                              child: Text(
+                                // different texts when searching and just browsing
+                                _searchController.text.isNotEmpty
+                                    ? 'No Search Results'
+                                    : 'Empty List',
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 12),
+                              itemCount: reminders.loading
+                                  ? 0
+                                  : (creatingReminder
+                                        // all this index trickery needed because a new reminder creation widget is also part of list view
+                                        ? reminders.list.length + 1
+                                        : reminders.list.length),
+                              itemBuilder: (context, index) {
+                                // allow reminders to be swiped only when filtering by active
+                                final dismissible = reminders.filter == .active;
 
-                              if (creatingReminder && index == 0) {
-                                final card = CreateReminderCard(
-                                  key: ValueKey('create-note-card'),
+                                if (creatingReminder && index == 0) {
+                                  final card = CreateReminderCard(
+                                    key: ValueKey('create-note-card'),
+                                  );
+
+                                  return dismissible
+                                      ? Dismissible(
+                                          key: ValueKey('create-note-card'),
+                                          onDismissed: (_) =>
+                                              _cancelNoteCreation(),
+                                          child: card,
+                                        )
+                                      : card;
+                                }
+
+                                return _buildReminderCard(
+                                  reminders,
+                                  creatingReminder ? index - 1 : index,
+                                  dismissible: dismissible,
                                 );
-
-                                return dismissible
-                                    ? Dismissible(
-                                        key: ValueKey('create-note-card'),
-                                        onDismissed: (_) =>
-                                            _cancelNoteCreation(),
-                                        child: card,
-                                      )
-                                    : card;
-                              }
-
-                              return _buildReminderCard(
-                                reminders,
-                                creatingReminder ? index - 1 : index,
-                                dismissible: dismissible,
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }

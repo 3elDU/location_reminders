@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:location_reminders/xnopyt.dart';
 import 'package:native_geofence/native_geofence.dart';
 
 class DebugPage extends StatefulWidget {
@@ -46,6 +47,7 @@ class _DebugPageState extends State<DebugPage> {
                   )
                 : null,
           ),
+          ListTile(title: Text('Xnopyt'), onTap: playXnopyt),
         ],
       ),
     );
